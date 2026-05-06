@@ -95,7 +95,7 @@ const Layout = ({ children }) => {
   const getMenuItems = () => {
         if (user?.role === 'student') {
           return [
-            { text: 'Dashboard', icon: <Dashboard />, path: '/' },
+            { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
             { text: 'Book Appointment', icon: <LocalHospital />, path: '/book-appointment' },
             { text: 'My Appointments', icon: <Queue />, path: '/appointments' },
             { text: 'Emergency SOS', icon: <Warning />, path: '/emergency-sos' },
@@ -107,28 +107,28 @@ const Layout = ({ children }) => {
           ];
         } else if (user?.role === 'doctor') {
           return [
-            { text: 'Dashboard', icon: <Dashboard />, path: '/' },
+            { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
             { text: 'Today\'s Appointments', icon: <LocalHospital />, path: '/doctor-dashboard' },
             { text: 'Patient Chat', icon: <Chat />, path: '/patient-chat' },
             { text: 'Profile', icon: <Person />, path: '/profile' },
           ];
         } else if (user?.role === 'hod') {
           return [
-            { text: 'Dashboard', icon: <Dashboard />, path: '/' },
+            { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
             { text: 'Leave Approvals', icon: <Assignment />, path: '/leave-requests' },
             { text: 'Department Analytics', icon: <Analytics />, path: '/analytics' },
             { text: 'Profile', icon: <Person />, path: '/profile' },
           ];
         } else if (user?.role === 'parent') {
           return [
-            { text: 'Ward Overview', icon: <Dashboard />, path: '/' },
+            { text: 'Ward Overview', icon: <Dashboard />, path: '/dashboard' },
             { text: 'Medical Records', icon: <Medication />, path: '/prescriptions' },
             { text: 'AI Support', icon: <Chat />, path: '/chatbot' },
             { text: 'Profile', icon: <Person />, path: '/profile' },
           ];
         } else if (user?.role === 'admin') {
           return [
-            { text: 'Dashboard', icon: <Dashboard />, path: '/' },
+            { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
             { text: 'Doctors', icon: <LocalHospital />, path: '/doctors' },
             { text: 'Ambulances', icon: <DirectionsCar />, path: '/ambulances' },
             { text: 'Queue Management', icon: <Queue />, path: '/queue' },

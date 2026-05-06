@@ -256,7 +256,7 @@ const ClerkLogin = () => {
                         footerActionLink: { color: '#C41E3A', fontWeight: 'bold', '&:hover': { color: '#8B0000' } },
                       },
                     }}
-                    redirectUrl="/"
+                    redirectUrl="/dashboard"
                     signUpUrl="/register"
                   />
                 </Box>

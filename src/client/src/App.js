@@ -135,7 +135,8 @@ function App() {
           <Router>
             <LocationGate>
             <Routes>
-              {/* Public Routes */}
+              {/* Public Root Route - Always show the role selection/login first */}
+              <Route path="/" element={<ClerkLogin />} />
               <Route path="/login" element={<ClerkLogin />} />
               <Route path="/register" element={<ClerkRegister />} />
               
@@ -147,8 +148,9 @@ function App() {
                     <SignedIn>
                       <Layout>
                         <Routes>
-                          {/* Dynamic Root Dashboard Route */}
-                          <Route index element={<DashboardRouter />} />
+                          {/* Dynamic Dashboard Route */}
+                          <Route path="dashboard" element={<DashboardRouter />} />
+                          <Route index element={<Navigate to="dashboard" replace />} />
                           
                           {/* Student Routes */}
                           <Route path="appointments" element={<Appointments />} />
