@@ -8,6 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import { ClerkAuthProvider } from './contexts/ClerkAuthContext';
 import Layout from './components/Layout/Layout';
+import LocationGate from './components/LocationGate';
 import ClerkLogin from './pages/Auth/ClerkLogin';
 import ClerkRegister from './pages/Auth/ClerkRegister';
 import TestPage from './TestPage';
@@ -142,8 +143,9 @@ function App() {
                 element={
                   <>
                     <SignedIn>
-                      <Layout>
-                        <Routes>
+                      <LocationGate>
+                        <Layout>
+                          <Routes>
                           {/* Student Routes */}
                           <Route index element={<StudentDashboard />} />
                           <Route path="appointments" element={<Appointments />} />
@@ -174,7 +176,8 @@ function App() {
                           <Route path="profile" element={<Profile />} />
                         </Routes>
                       </Layout>
-                    </SignedIn>
+                    </LocationGate>
+                  </SignedIn>
                     <SignedOut>
                       <RedirectToSignIn />
                     </SignedOut>
