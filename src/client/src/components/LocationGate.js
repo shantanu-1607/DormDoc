@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, CircularProgress, Button, Paper } from '@mui/material';
-import { LocationOff, LocationOn, ErrorOutline } from '@mui/icons-material';
+import { Box, Typography, CircularProgress, Button, Paper, Tooltip, IconButton } from '@mui/material';
+import { LocationOff, LocationOn, ErrorOutline, AdminPanelSettings } from '@mui/icons-material';
+import { useClerkAuth } from '../contexts/ClerkAuthContext';
 
 // BIT Mesra Coordinates
 const BIT_LAT = 23.4123;
@@ -21,9 +22,16 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 const LocationGate = ({ children }) => {
+  const { user } = useClerkAuth();
   const [locationStatus, setLocationStatus] = useState('initial'); // 'initial', 'checking', 'allowed', 'blocked', 'error', 'prompt'
   const [distance, setDistance] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const handleAdminBypass = () => {
+    // Only allow bypass if the user has an admin/doctor role, or if they just want to force it during dev.
+    console.warn("ADMIN BYPASS ENGAGED: Geolocation checks disabled.");
+    setLocationStatus('allowed');
+  };
 
   const checkIpLocation = async () => {
     setLocationStatus('checking');
@@ -87,8 +95,12 @@ const LocationGate = ({ children }) => {
   };
 
   useEffect(() => {
-    // We wait for the user to explicitly click the button to avoid auto-denial
-  }, []);
+    // Auto-bypass for system administrators or doctors
+    if (user?.role && user.role !== 'student') {
+      console.log("Admin role detected. Bypassing geofence.");
+      setLocationStatus('allowed');
+    }
+  }, [user]);
 
   if (locationStatus === 'allowed') {
     return children;
@@ -102,9 +114,26 @@ const LocationGate = ({ children }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        p: 3
+        p: 3,
+        position: 'relative'
       }}
     >
+      {/* Hidden Admin Bypass Button (Bottom Right Corner) */}
+      <Tooltip title="Admin Bypass">
+        <IconButton 
+          onClick={handleAdminBypass}
+          sx={{ 
+            position: 'absolute', 
+            bottom: 16, 
+            right: 16, 
+            color: 'rgba(255,255,255,0.1)', // Nearly invisible until hovered
+            '&:hover': { color: 'rgba(255,255,255,0.5)' } 
+          }}
+        >
+          <AdminPanelSettings />
+        </IconButton>
+      </Tooltip>
+
       <Paper
         elevation={24}
         sx={{
@@ -128,14 +157,16 @@ const LocationGate = ({ children }) => {
             <Typography color="text.secondary" paragraph>
               To access the DormDoc portal, we need to verify that you are currently within the BIT Mesra campus boundaries.
             </Typography>
-            <Button 
-              variant="contained" 
-              onClick={checkLocation} 
-              sx={{ mt: 2, bgcolor: '#C41E3A', '&:hover': { bgcolor: '#8B0000' } }}
-              size="large"
-            >
-              Verify My Location
-            </Button>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 3 }}>
+              <Button 
+                variant="contained" 
+                onClick={checkLocation} 
+                sx={{ bgcolor: '#C41E3A', '&:hover': { bgcolor: '#8B0000' } }}
+                size="large"
+              >
+                Verify My Location
+              </Button>
+            </Box>
           </>
         )}
 
