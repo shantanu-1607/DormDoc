@@ -1,269 +1,500 @@
 import React, { useState } from 'react';
 import { SignIn } from '@clerk/clerk-react';
-import { Box, Container, Typography, Paper, Grid, Card, CardContent, IconButton } from '@mui/material';
-import { School, AdminPanelSettings, LocalHospital, AccountBalance, FamilyRestroom, ArrowBack } from '@mui/icons-material';
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  IconButton,
+  Stack,
+  Divider,
+  useTheme,
+  useMediaQuery,
+} from '@mui/material';
+import {
+  School,
+  AdminPanelSettings,
+  LocalHospital,
+  AccountBalance,
+  FamilyRestroom,
+  ArrowBack,
+  ChevronRight,
+  ShieldOutlined,
+  VerifiedOutlined,
+  AutoAwesomeOutlined,
+} from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
+import { palette } from '../../theme';
 
 const roles = [
-  { id: 'student', title: 'Student', icon: <School fontSize="large" />, color: '#3b82f6', desc: 'Access medical records & book appointments' },
-  { id: 'doctor', title: 'Medical Faculty', icon: <LocalHospital fontSize="large" />, color: '#10b981', desc: 'Manage patients & prescriptions' },
-  { id: 'admin', title: 'Administrator', icon: <AdminPanelSettings fontSize="large" />, color: '#8b5cf6', desc: 'Manage dispensary operations' },
-  { id: 'hod', title: 'HOD', icon: <AccountBalance fontSize="large" />, color: '#f59e0b', desc: 'Departmental medical oversight' },
-  { id: 'parent', title: 'Parent', icon: <FamilyRestroom fontSize="large" />, color: '#ec4899', desc: 'View ward medical status' },
+  {
+    id: 'student',
+    title: 'Student',
+    icon: School,
+    color: palette.navy.main,
+    desc: 'Book appointments, view prescriptions, request leave',
+  },
+  {
+    id: 'doctor',
+    title: 'Medical Faculty',
+    icon: LocalHospital,
+    color: palette.maroon.main,
+    desc: 'Manage queues, write prescriptions, chat with patients',
+  },
+  {
+    id: 'admin',
+    title: 'Administrator',
+    icon: AdminPanelSettings,
+    color: palette.navy.dark,
+    desc: 'Oversee operations, inventory, analytics & fleet',
+  },
+  {
+    id: 'hod',
+    title: 'Head of Department',
+    icon: AccountBalance,
+    color: palette.gold,
+    desc: 'Approve leaves, monitor department health metrics',
+  },
+  {
+    id: 'parent',
+    title: 'Parent / Guardian',
+    icon: FamilyRestroom,
+    color: '#7A5C3B',
+    desc: 'Track your ward’s health & receive alerts',
+  },
 ];
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.08 * i, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
+
+const HeroPanel = () => (
+  <Box
+    sx={{
+      position: 'relative',
+      overflow: 'hidden',
+      display: { xs: 'none', md: 'flex' },
+      flexDirection: 'column',
+      flex: 1.15,
+      color: '#FFFFFF',
+      background: `
+        radial-gradient(1200px 800px at 10% 0%, rgba(212, 162, 76, 0.18) 0%, transparent 60%),
+        radial-gradient(900px 600px at 90% 100%, rgba(26, 43, 92, 0.55) 0%, transparent 55%),
+        linear-gradient(135deg, ${palette.maroon.dark} 0%, ${palette.maroon.main} 50%, ${palette.navy.main} 100%)
+      `,
+      backgroundImage: `
+        linear-gradient(rgba(15, 24, 64, 0.55), rgba(92, 15, 15, 0.65)),
+        url('/assets/bit_campus.jpg')
+      `,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      // NOTE: If /assets/bit_campus.jpg is not present, the linear-gradient
+      // fallback above is sufficient and looks premium on its own.
+      px: { md: 6, lg: 9 },
+      py: { md: 6, lg: 8 },
+      borderRadius: { md: '20px 0 0 20px' },
+    }}
+  >
+    {/* Subtle decorative grid */}
+    <Box
+      aria-hidden
+      sx={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage:
+          'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+        backgroundSize: '40px 40px',
+        maskImage: 'radial-gradient(ellipse at 30% 30%, black 30%, transparent 75%)',
+        WebkitMaskImage: 'radial-gradient(ellipse at 30% 30%, black 30%, transparent 75%)',
+      }}
+    />
+
+    {/* Top brand row */}
+    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box
+        component="img"
+        src="/assets/bit_logo.png"
+        alt="BIT Mesra"
+        sx={{
+          width: 56,
+          height: 56,
+          p: 0.75,
+          background: '#FFFFFF',
+          borderRadius: '50%',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+        }}
+      />
+      <Box>
+        <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '0.24em' }}>
+          Birla Institute of Technology
+        </Typography>
+        <Typography sx={{ fontWeight: 600, letterSpacing: '0.18em', fontSize: '0.75rem', color: palette.gold }}>
+          MESRA · RANCHI · EST. 1955
+        </Typography>
+      </Box>
+    </Box>
+
+    {/* Centerpiece */}
+    <Box sx={{ position: 'relative', mt: 'auto', mb: 'auto' }}>
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={1}>
+        <Typography
+          variant="h1"
+          sx={{
+            fontSize: { md: '3.4rem', lg: '4.2rem' },
+            color: '#FFFFFF',
+            lineHeight: 1.05,
+            mb: 2,
+          }}
+        >
+          Campus healthcare,
+          <Box component="span" sx={{ display: 'block', fontStyle: 'italic', color: palette.gold }}>
+            elevated.
+          </Box>
+        </Typography>
+      </motion.div>
+
+      <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={2}>
+        <Typography
+          sx={{
+            color: 'rgba(255,255,255,0.82)',
+            fontSize: '1.05rem',
+            maxWidth: 520,
+            lineHeight: 1.7,
+          }}
+        >
+          DormDoc connects students, faculty, and administrators through a single,
+          intelligent platform — from appointments and prescriptions to ambulance
+          dispatch and emergency SOS, all under one roof.
+        </Typography>
+      </motion.div>
+
+      <Stack direction="row" spacing={4} sx={{ mt: 5 }}>
+        {[
+          { icon: ShieldOutlined, label: 'HIPAA-style privacy' },
+          { icon: VerifiedOutlined, label: 'Role-verified access' },
+          { icon: AutoAwesomeOutlined, label: 'AI medical assistant' },
+        ].map(({ icon: Icon, label }, idx) => (
+          <motion.div
+            key={label}
+            initial="hidden"
+            animate="visible"
+            variants={fadeUp}
+            custom={3 + idx}
+          >
+            <Stack direction="row" spacing={1.25} alignItems="center">
+              <Icon sx={{ color: palette.gold, fontSize: 22 }} />
+              <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500, fontSize: '0.92rem' }}>
+                {label}
+              </Typography>
+            </Stack>
+          </motion.div>
+        ))}
+      </Stack>
+    </Box>
+
+    {/* Footer attribution */}
+    <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)', letterSpacing: '0.16em' }}>
+        © {new Date().getFullYear()} DORMDOC · A BIT MESRA INITIATIVE
+      </Typography>
+      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)', letterSpacing: '0.16em' }}>
+        v1.0
+      </Typography>
+    </Box>
+  </Box>
+);
+
+const RoleTile = ({ role, onSelect }) => {
+  const Icon = role.icon;
+  return (
+    <Box
+      component={motion.div}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.995 }}
+      onClick={() => onSelect(role.id)}
+      sx={{
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 2.25,
+        padding: '18px 20px',
+        borderRadius: 2.5,
+        border: '1px solid rgba(15, 24, 64, 0.08)',
+        background: '#FFFFFF',
+        transition: 'border-color 200ms ease, box-shadow 200ms ease',
+        '&:hover': {
+          borderColor: 'rgba(123, 30, 30, 0.4)',
+          boxShadow: '0 12px 30px rgba(15, 24, 64, 0.08)',
+        },
+      }}
+    >
+      <Box
+        sx={{
+          width: 46,
+          height: 46,
+          borderRadius: '50%',
+          display: 'grid',
+          placeItems: 'center',
+          backgroundColor: `${role.color}14`,
+          color: role.color,
+          flexShrink: 0,
+        }}
+      >
+        <Icon />
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography sx={{ fontWeight: 600, color: palette.navy.dark, fontSize: '1rem' }}>
+          {role.title}
+        </Typography>
+        <Typography variant="body2" sx={{ color: palette.navy.light, opacity: 0.85 }}>
+          {role.desc}
+        </Typography>
+      </Box>
+      <ChevronRight sx={{ color: palette.maroon.main, opacity: 0.5 }} />
+    </Box>
+  );
+};
 
 const ClerkLogin = () => {
   const [selectedRole, setSelectedRole] = useState(null);
+  const theme = useTheme();
+  const isSm = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleRoleSelect = (roleId) => {
     localStorage.setItem('pendingRole', roleId);
     setSelectedRole(roleId);
   };
 
+  const activeRole = roles.find((r) => r.id === selectedRole);
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #1A365D 0%, #0F172A 100%)',
+        background: `
+          radial-gradient(900px 600px at 100% 0%, rgba(123, 30, 30, 0.06), transparent 70%),
+          radial-gradient(700px 500px at 0% 100%, rgba(26, 43, 92, 0.06), transparent 70%),
+          ${palette.cream.default}
+        `,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
+        py: { xs: 0, md: 6 },
+        px: { xs: 0, md: 4 },
       }}
     >
-      {/* Background Pattern */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          opacity: 0.5,
-        }}
-      />
-
-      <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-        <Box
+      <Container disableGutters maxWidth="lg" sx={{ position: 'relative' }}>
+        <Paper
+          elevation={0}
           sx={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            py: 4,
+            flexDirection: { xs: 'column', md: 'row' },
+            overflow: 'hidden',
+            borderRadius: { xs: 0, md: 4 },
+            minHeight: { xs: '100vh', md: '680px' },
+            backgroundColor: '#FFFFFF',
+            border: { md: '1px solid rgba(15, 24, 64, 0.06)' },
+            boxShadow: { md: '0 30px 80px rgba(15, 24, 64, 0.08)' },
           }}
         >
-          {/* Left Panel - Branding */}
-          <Paper
-            elevation={24}
+          <HeroPanel />
+
+          {/* Form / role selection panel */}
+          <Box
             sx={{
               flex: 1,
-              maxWidth: '550px',
-              background: 'linear-gradient(145deg, #C41E3A 0%, #8B0000 100%)',
-              color: 'white',
-              p: 6,
-              borderRadius: '24px 0 0 24px',
-              position: 'relative',
-              overflow: 'hidden',
-              display: { xs: 'none', md: 'flex' },
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              minHeight: '650px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRight: 'none',
-            }}
-          >
-            {/* Background Accent */}
-            <Box sx={{
-              position: 'absolute',
-              top: '-10%',
-              right: '-10%',
-              width: '300px',
-              height: '300px',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255,215,0,0.1) 0%, rgba(255,255,255,0) 70%)',
-            }}/>
-
-            {/* BIT Emblem */}
-            <Box sx={{ 
-              textAlign: 'center', 
-              mb: 4,
-              p: 2,
-              background: 'white',
-              borderRadius: '50%',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-              width: 140,
-              height: 140,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <img src="/assets/bit_logo.png" alt="BIT Mesra Logo" style={{ width: 120, height: 120, objectFit: 'contain' }} />
-            </Box>
-
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: '900',
-                mb: 1,
-                textAlign: 'center',
-                color: '#ffffff',
-                textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                letterSpacing: 1
-              }}
-            >
-              Birla Institute of Technology
-            </Typography>
-
-            <Typography
-              variant="h6"
-              sx={{
-                textAlign: 'center',
-                mb: 5,
-                color: '#FFD700',
-                fontWeight: 600,
-                letterSpacing: 2,
-                textTransform: 'uppercase'
-              }}
-            >
-              Mesra, Ranchi
-            </Typography>
-
-            {/* DormDoc Logo & Title */}
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center',
-              background: 'rgba(0,0,0,0.2)',
-              p: 3,
-              borderRadius: 4,
-              border: '1px solid rgba(255,255,255,0.1)',
-              width: '100%'
-            }}>
-              <img src="/assets/dormdoc_logo.png" alt="DormDoc Logo" style={{ width: 80, height: 'auto', marginBottom: '16px', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }} />
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 'bold',
-                  color: '#ffffff',
-                  textAlign: 'center',
-                  mb: 1
-                }}
-              >
-                DormDoc System
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  textAlign: 'center',
-                  color: 'rgba(255,255,255,0.8)',
-                  lineHeight: 1.6,
-                }}
-              >
-                Comprehensive & Intelligent Healthcare Management
-              </Typography>
-            </Box>
-          </Paper>
-
-          {/* Right Panel - Dynamic Login Area */}
-          <Paper
-            elevation={24}
-            sx={{
-              flex: 1,
-              maxWidth: '600px',
-              background: '#ffffff',
-              p: { xs: 4, md: 6 },
-              borderRadius: { xs: '24px', md: '0 24px 24px 0' },
-              minHeight: '650px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
+              px: { xs: 3, sm: 6, md: 6, lg: 7 },
+              py: { xs: 5, md: 6 },
+              backgroundColor: '#FFFFFF',
             }}
           >
-            {!selectedRole ? (
-              <Box>
-                <Box sx={{ textAlign: 'center', mb: 4 }}>
-                  <Box sx={{ display: { xs: 'flex', md: 'none' }, justifyContent: 'center', mb: 3 }}>
-                    <img src="/assets/bit_logo.png" alt="BIT Mesra Logo" style={{ width: 80, height: 80 }} />
-                  </Box>
-                  <Typography variant="h4" sx={{ fontWeight: '800', mb: 1, color: '#1A365D' }}>
-                    Select Your Role
+            {/* Mobile brand block */}
+            {isSm && (
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+                <Box
+                  component="img"
+                  src="/assets/bit_logo.png"
+                  alt="BIT Mesra"
+                  sx={{ width: 44, height: 44 }}
+                />
+                <Box>
+                  <Typography variant="overline" sx={{ color: palette.navy.main }}>
+                    BIT Mesra · DormDoc
                   </Typography>
-                  <Typography variant="body1" sx={{ color: '#64748B' }}>
-                    Please choose how you want to log into the system
+                  <Typography variant="caption" sx={{ display: 'block', color: palette.gold, fontWeight: 600 }}>
+                    Campus Dispensary System
                   </Typography>
                 </Box>
-                <Grid container spacing={2}>
-                  {roles.map((role) => (
-                    <Grid item xs={12} sm={role.id === 'parent' ? 12 : 6} key={role.id}>
-                      <Card 
-                        onClick={() => handleRoleSelect(role.id)}
-                        sx={{ 
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease-in-out',
-                          border: '2px solid transparent',
-                          '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: 6,
-                            borderColor: role.color,
-                          }
-                        }}
+              </Stack>
+            )}
+
+            <AnimatePresence mode="wait">
+              {!selectedRole ? (
+                <motion.div
+                  key="role-select"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <Box
+                    sx={{
+                      height: 3,
+                      width: 56,
+                      backgroundColor: palette.gold,
+                      borderRadius: 4,
+                      mb: 2.5,
+                    }}
+                  />
+                  <Typography variant="h3" sx={{ fontSize: { xs: '1.9rem', md: '2.4rem' }, mb: 1 }}>
+                    Welcome back
+                  </Typography>
+                  <Typography sx={{ color: palette.navy.light, mb: 4, fontSize: '1rem' }}>
+                    Select your role to continue to DormDoc.
+                  </Typography>
+
+                  <Stack spacing={1.5}>
+                    {roles.map((role, idx) => (
+                      <motion.div
+                        key={role.id}
+                        initial="hidden"
+                        animate="visible"
+                        variants={fadeUp}
+                        custom={idx}
                       >
-                        <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', p: 3 }}>
-                          <Box sx={{ color: role.color, mb: 1 }}>
-                            {React.cloneElement(role.icon, { fontSize: 'large' })}
-                          </Box>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#1E293B', mb: 0.5 }}>
-                            {role.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {role.desc}
-                          </Typography>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            ) : (
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-                  <IconButton onClick={() => setSelectedRole(null)} sx={{ mr: 2, color: '#1A365D' }}>
-                    <ArrowBack />
-                  </IconButton>
-                  <Box>
-                    <Typography variant="h5" sx={{ fontWeight: '800', color: '#1A365D' }}>
-                      {roles.find(r => r.id === selectedRole)?.title} Login
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#64748B' }}>
-                      Sign in to your account to continue
-                    </Typography>
-                  </Box>
-                </Box>
+                        <RoleTile role={role} onSelect={handleRoleSelect} />
+                      </motion.div>
+                    ))}
+                  </Stack>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                  <SignIn
-                    appearance={{
-                      elements: {
-                        rootBox: { width: '100%' },
-                        card: { width: '100%', boxShadow: 'none', border: 'none', padding: 0 },
-                        header: { display: 'none' },
-                        formButtonPrimary: { backgroundColor: '#C41E3A', padding: '12px', fontSize: '16px', fontWeight: 'bold', textTransform: 'none', '&:hover': { backgroundColor: '#8B0000' } },
-                        socialButtonsBlockButton: { padding: '12px', border: '2px solid #E2E8F0', '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' } },
-                        formFieldInput: { padding: '12px', border: '2px solid #E2E8F0', backgroundColor: '#F8FAFC', '&:focus': { borderColor: '#C41E3A', boxShadow: '0 0 0 4px rgba(196, 30, 58, 0.1)' } },
-                        footerActionLink: { color: '#C41E3A', fontWeight: 'bold', '&:hover': { color: '#8B0000' } },
+                  <Divider sx={{ my: 4 }} />
+
+                  <Stack direction="row" justifyContent="space-between" spacing={2}>
+                    <Typography variant="caption" sx={{ color: palette.navy.light }}>
+                      Need help? Contact the campus health office.
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: palette.navy.light }}>
+                      Privacy · Terms
+                    </Typography>
+                  </Stack>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="signin"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                    <IconButton
+                      onClick={() => setSelectedRole(null)}
+                      sx={{
+                        color: palette.maroon.main,
+                        border: '1px solid rgba(123, 30, 30, 0.18)',
+                        borderRadius: 2,
+                        '&:hover': { backgroundColor: 'rgba(123, 30, 30, 0.06)' },
+                      }}
+                    >
+                      <ArrowBack fontSize="small" />
+                    </IconButton>
+                    <Box>
+                      <Typography variant="overline" sx={{ color: palette.navy.main }}>
+                        Continue as
+                      </Typography>
+                      <Typography variant="h5" sx={{ color: palette.navy.dark, fontWeight: 700 }}>
+                        {activeRole?.title}
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      '& .cl-rootBox, & .cl-card': {
+                        width: '100%',
+                        boxShadow: 'none',
+                        border: 'none',
+                        padding: 0,
+                        background: 'transparent',
                       },
                     }}
-                    redirectUrl="/dashboard"
-                    signUpUrl="/register"
-                  />
-                </Box>
-              </Box>
-            )}
-          </Paper>
-        </Box>
+                  >
+                    <SignIn
+                      appearance={{
+                        variables: {
+                          colorPrimary: palette.maroon.main,
+                          colorText: palette.navy.dark,
+                          colorTextSecondary: palette.navy.light,
+                          colorBackground: '#FFFFFF',
+                          borderRadius: '10px',
+                          fontFamily: '"Inter", sans-serif',
+                        },
+                        elements: {
+                          rootBox: { width: '100%' },
+                          card: {
+                            width: '100%',
+                            boxShadow: 'none',
+                            border: 'none',
+                            padding: 0,
+                            background: 'transparent',
+                          },
+                          header: { display: 'none' },
+                          formButtonPrimary: {
+                            backgroundColor: palette.maroon.main,
+                            padding: '12px',
+                            fontSize: '0.95rem',
+                            fontWeight: 600,
+                            letterSpacing: 0.2,
+                            textTransform: 'none',
+                            boxShadow: '0 4px 12px rgba(123, 30, 30, 0.25)',
+                            '&:hover': { backgroundColor: palette.maroon.dark },
+                          },
+                          socialButtonsBlockButton: {
+                            padding: '11px',
+                            border: '1px solid rgba(15, 24, 64, 0.12)',
+                            borderRadius: '10px',
+                            '&:hover': {
+                              backgroundColor: 'rgba(15, 24, 64, 0.03)',
+                            },
+                          },
+                          formFieldInput: {
+                            padding: '12px',
+                            border: '1px solid rgba(15, 24, 64, 0.16)',
+                            borderRadius: '10px',
+                            backgroundColor: '#FFFFFF',
+                            '&:focus': {
+                              borderColor: palette.maroon.main,
+                              boxShadow: `0 0 0 4px ${palette.maroon.main}1f`,
+                            },
+                          },
+                          footerActionLink: {
+                            color: palette.maroon.main,
+                            fontWeight: 600,
+                            '&:hover': { color: palette.maroon.dark },
+                          },
+                          dividerLine: { backgroundColor: 'rgba(15, 24, 64, 0.1)' },
+                          dividerText: { color: palette.navy.light },
+                        },
+                      }}
+                      redirectUrl="/dashboard"
+                      signUpUrl="/register"
+                    />
+                  </Box>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Box>
+        </Paper>
       </Container>
     </Box>
   );
