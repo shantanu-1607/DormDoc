@@ -106,6 +106,7 @@ app.use('/api/student', profileRoutes);
 app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/ambulance-tracking', ambulanceTrackingRoutes);
+app.use('/api/hod', require('./routes/hod'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

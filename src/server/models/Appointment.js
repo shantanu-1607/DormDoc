@@ -112,7 +112,14 @@ const appointmentSchema = new mongoose.Schema({
       type: String,
       default: ''
     },
-    approvedAt: Date
+    approvedAt: Date,
+    // HOD decision audit fields (populated when HOD approves/rejects)
+    decidedBy:       { type: mongoose.Schema.Types.ObjectId, ref: 'Faculty', default: null },
+    decidedByName:   { type: String, default: '' },
+    decidedAt:       { type: Date, default: null },
+    decisionRole:    { type: String, default: '' },
+    decisionComments:{ type: String, default: '' },
+    hodReviewedAt:   { type: Date, default: null },
   }
 }, {
   timestamps: true

@@ -35,6 +35,12 @@ import DoctorDashboard from './pages/Doctor/DoctorDashboard';
 import PatientChat from './pages/Doctor/PatientChat';
 import LoginInfo from './pages/Admin/LoginInfo';
 import Onboarding from './pages/Auth/Onboarding';
+import RoleRoute from './components/Auth/RoleRoute';
+import LeaveApprovals from './pages/HOD/LeaveApprovals';
+import DepartmentAnalytics from './pages/HOD/DepartmentAnalytics';
+import DepartmentStudents from './pages/HOD/DepartmentStudents';
+import ActiveCases from './pages/HOD/ActiveCases';
+import DepartmentReports from './pages/HOD/DepartmentReports';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -174,7 +180,49 @@ function App() {
                           {/* Doctor Routes */}
                           <Route path="doctor-dashboard" element={<DoctorDashboard />} />
                           <Route path="patient-chat" element={<PatientChat />} />
-                          
+
+                          {/* HOD Routes — protected by RoleRoute */}
+                          <Route
+                            path="hod/leave-approvals"
+                            element={
+                              <RoleRoute roles={['hod']}>
+                                <LeaveApprovals />
+                              </RoleRoute>
+                            }
+                          />
+                          <Route
+                            path="hod/analytics"
+                            element={
+                              <RoleRoute roles={['hod']}>
+                                <DepartmentAnalytics />
+                              </RoleRoute>
+                            }
+                          />
+                          <Route
+                            path="hod/students"
+                            element={
+                              <RoleRoute roles={['hod']}>
+                                <DepartmentStudents />
+                              </RoleRoute>
+                            }
+                          />
+                          <Route
+                            path="hod/active-cases"
+                            element={
+                              <RoleRoute roles={['hod']}>
+                                <ActiveCases />
+                              </RoleRoute>
+                            }
+                          />
+                          <Route
+                            path="hod/reports"
+                            element={
+                              <RoleRoute roles={['hod']}>
+                                <DepartmentReports />
+                              </RoleRoute>
+                            }
+                          />
+
                           {/* Profile Route */}
                           <Route path="profile" element={<Profile />} />
                         </Routes>

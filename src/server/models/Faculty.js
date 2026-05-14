@@ -40,6 +40,12 @@ const facultySchema = new mongoose.Schema({
   // Role in portal
   role: { type: String, enum: ['faculty', 'hod', 'dean'], default: 'faculty' },
   hodDepartment: { type: String }, // if role is 'hod', which dept they head
+  hodSince: { type: Date },        // date the faculty member became HOD
+  hodPermissions: {
+    canApproveLeave:       { type: Boolean, default: true },
+    canViewMedicalHistory: { type: Boolean, default: true },
+    canExportReports:      { type: Boolean, default: true },
+  },
 
   // Status
   isActive: { type: Boolean, default: true },

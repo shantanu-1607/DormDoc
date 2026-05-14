@@ -114,10 +114,13 @@ const Layout = ({ children }) => {
           ];
         } else if (user?.role === 'hod') {
           return [
-            { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
-            { text: 'Leave Approvals', icon: <Assignment />, path: '/leave-requests' },
-            { text: 'Department Analytics', icon: <Analytics />, path: '/analytics' },
-            { text: 'Profile', icon: <Person />, path: '/profile' },
+            { text: 'Dashboard',            icon: <Dashboard />,  path: '/dashboard' },
+            { text: 'Leave Approvals',       icon: <Assignment />, path: '/hod/leave-approvals' },
+            { text: 'Department Analytics',  icon: <Analytics />,  path: '/hod/analytics' },
+            { text: 'Department Students',   icon: <Person />,     path: '/hod/students' },
+            { text: 'Active Cases',          icon: <LocalHospital />, path: '/hod/active-cases' },
+            { text: 'Reports',               icon: <Assignment />, path: '/hod/reports' },
+            { text: 'Profile',               icon: <Person />,     path: '/profile' },
           ];
         } else if (user?.role === 'parent') {
           return [
