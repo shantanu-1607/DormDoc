@@ -51,7 +51,8 @@
     "concurrently": "^8.2.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.1",
+    "supabase": "^2.101.0"
   },
   "engines": {
     "node": ">=18.0.0",
