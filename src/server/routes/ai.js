@@ -1,7 +1,6 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
-const { authenticateToken, optionalAuth } = require('../middleware/auth');
-const axios = require('axios');
+const { optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -54,7 +53,7 @@ router.post('/chatbot', [
     }
 
     const { message, conversationHistory = [] } = req.body;
-    const userId = req.user ? req.user._id : null;
+    const userId = req.user ? req.user.id : null;
 
     // Get AI response from chatbot
     const chatbotResponse = await getChatbotResponse(message, conversationHistory, userId);
@@ -76,7 +75,7 @@ router.post('/chatbot', [
 // @desc    Predict wait time using AI
 // @access  Private
 router.post('/predict-wait-time', [
-  body('doctorId').isMongoId().withMessage('Valid doctor ID is required'),
+  body('doctorId').isUUID().withMessage('Valid doctor ID is required'),
   body('appointmentTime').notEmpty().withMessage('Appointment time is required'),
   body('priority').isNumeric().withMessage('Priority must be a number')
 ], async (req, res) => {
@@ -106,7 +105,7 @@ router.post('/predict-wait-time', [
 // @desc    Optimize doctor schedule using AI
 // @access  Private
 router.post('/optimize-schedule', [
-  body('doctorId').isMongoId().withMessage('Valid doctor ID is required'),
+  body('doctorId').isUUID().withMessage('Valid doctor ID is required'),
   body('date').isISO8601().withMessage('Valid date is required')
 ], async (req, res) => {
   try {
