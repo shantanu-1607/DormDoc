@@ -71,29 +71,37 @@ Full mapping lives in **[`docs/schema-mapping.md`](docs/schema-mapping.md)**. Su
 
 Full enum list + FK `ON DELETE` matrix in **[`docs/enums-and-fks.md`](docs/enums-and-fks.md)**. 23 enum types, FK policy summary: `CASCADE` for profile/role chain and embedded children; `RESTRICT` for clinical (students→prescriptions/appointments) and dispatch (ambulance→trips) to block accidental data loss; `SET NULL` for "actor" FKs (doctor/driver/decider/updated_by) with denormalized name columns so audit survives staff turnover.
 
-### Block 1.3: Initial migrations — **DONE (files written, not yet applied)**
+### Block 1.3: Initial migrations — **DONE & APPLIED**
 
-Six migration files in `supabase/migrations/` covering the full schema, in dependency order. RLS is enabled default-deny on every table; policies land in 1.4.
+Six migration files in `supabase/migrations/` covering the full schema, in dependency order. RLS is enabled default-deny on every table; policies land in 1.4. All applied via Supabase MCP `apply_migration` on 2026-05-23; local filenames renamed to match server-assigned version stamps so `supabase db push` stays in sync.
 
-- [x] `20260523120000_init_extensions_and_enums.sql` — pgcrypto + citext + 23 enum types + `set_updated_at()` function
-- [x] `20260523120001_init_profiles_and_roles.sql` — profiles, students, faculty, parents, dispensary_staff, parent_student_links, staff_availability, medical_history + `auth.users → profiles` trigger
-- [x] `20260523120002_init_clinical.sql` — appointments, leave_requests, prescriptions, prescription_medications
-- [x] `20260523120003_init_inventory.sql` — inventory_items
-- [x] `20260523120004_init_ambulance.sql` — ambulances, equipment, maintenance_issues, trips, status_log
-- [x] `20260523120005_init_audit_logs.sql` — leave_decisions, login_logs (append-only, no `updated_at`)
-- [ ] Apply with `npx supabase db push` (deferred — pending Supabase MCP reconnect for live validation)
+- [x] `20260522223631_init_extensions_and_enums.sql` — pgcrypto + citext + 23 enum types + `set_updated_at()` function
+- [x] `20260522223709_init_profiles_and_roles.sql` — profiles, students, faculty, parents, dispensary_staff, parent_student_links, staff_availability, medical_history + `auth.users → profiles` trigger
+- [x] `20260522223731_init_clinical.sql` — appointments, leave_requests, prescriptions, prescription_medications
+- [x] `20260522223735_init_inventory.sql` — inventory_items
+- [x] `20260522223757_init_ambulance.sql` — ambulances, equipment, maintenance_issues, trips, status_log
+- [x] `20260522223804_init_audit_logs.sql` — leave_decisions, login_logs (append-only, no `updated_at`)
+- [x] Validated: `list_tables` shows 20 tables, all RLS-enabled, 0 rows
+- [x] Advisors clean except: 20× `rls_enabled_no_policy` (expected — fixed in 1.4); 3 WARNs (`set_updated_at` mutable search_path, `handle_new_user` SECURITY DEFINER exposed via RPC, `citext` in public schema) — all addressed at start of 1.4
 - [ ] Sample inserts (deferred to 1.4 alongside RLS policy testing)
 
-### Block 1.4: RLS policy skeleton
-- [ ] Enable RLS on every table (default-deny)
-- [ ] Write policies per role:
-  - Students: own profile + own prescriptions + own appointments
-  - Doctors: read all students, write prescriptions
-  - HOD: department-scoped reads
-  - Admin: full access
-- [ ] Document policy decisions in `docs/rls-policies.md`
+### Block 1.4: RLS policy skeleton — **DONE & APPLIED**
 
-**Deliverable:** local Supabase has full schema + RLS, no data yet.
+Three migrations applied via Supabase MCP on 2026-05-23. Full role × table matrix and trust model in **[`docs/rls-policies.md`](docs/rls-policies.md)**. Security advisors are clean (one residual lint is Supabase-managed `rls_auto_enable`).
+
+- [x] RLS already enabled default-deny in 1.3 — confirmed during 1.4 apply
+- [x] `20260522224507_phase14_hardening_and_helpers.sql` — fixes 1.3 warnings (`set_updated_at` search_path, lock down `handle_new_user`, move citext to `extensions`) + 11 RLS helper functions (`is_admin`, `is_doctor`, `is_dispensary_staff`, `is_hod`, `is_faculty`, `is_parent`, `is_student`, `hod_department`, `student_department(uuid)`, `parent_of_student(uuid)`, `current_role_v`)
+- [x] `20260522224804_phase14_rls_policies.sql` — full per-role policies for all 20 tables; append-only enforcement on `leave_decisions`, `login_logs`, `ambulance_trip_status_log`; `BEFORE UPDATE` trigger `guard_parents_verification` blocks non-admin writes to `parents.is_verified*`
+- [x] `20260522224952_phase14_move_helpers_to_private.sql` — moves helpers + guard trigger fn to `app_private` schema so they're not exposed via PostgREST `/rest/v1/rpc/*`; OIDs preserved so policies/trigger keep working
+- [x] `20260522225738_phase14_perf_pass.sql` — adds 9 covering indexes for actor/audit FKs; recreates every policy with `(select auth.uid())` initplan pattern (clears 34× `auth_rls_initplan` WARN at scale)
+- [x] `docs/rls-policies.md` published
+
+**Known residual lints (accepted):**
+- 1× `rls_auto_enable` SECURITY DEFINER warning — Supabase-managed event trigger function, not ours.
+- 1× `multiple_permissive_policies` WARN on `profiles.UPDATE` — by design (self vs. admin split for role-escalation guard).
+- N× `unused_index` INFO — expected on empty DB.
+
+**Deliverable:** schema + RLS live on `wlkwirmormsspyxgkfqg`. Empty database, ready for Phase 2 (auth migration).
 
 ---
 
