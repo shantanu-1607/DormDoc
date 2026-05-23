@@ -107,27 +107,35 @@ Three migrations applied via Supabase MCP on 2026-05-23. Full role × table matr
 
 ## Phase 2 — Auth Migration *(2–3 days)*
 
-### Block 2.1: Supabase Auth setup
+Decision log:
+- **OTP delivery:** 6-digit email OTP (matches old UX). Magic link deferred.
+- **Email provider:** Supabase default SMTP for dev; configure Resend / Postmark / SES before prod.
+- **Onboarding:** post-OTP form collects role-specific fields (`students` row).
+- **Existing users:** greenfield — no Mongo/Clerk users to migrate. Forced re-signup acceptable.
+- **MSG91 / SMS:** deferred to Phase 2.x via Supabase "Send SMS Hook".
+
+### Block 2.1: Supabase Auth setup *(dashboard, user-driven)*
 - [ ] Enable email provider in Supabase dashboard
-- [ ] Configure email templates (OTP, magic link, password reset)
-- [ ] Set redirect URLs (localhost + Vercel preview + prod)
-- [ ] Decide: 6-digit OTP code (matches current UX) vs magic link
+- [ ] Update "Magic Link" + "Confirm signup" templates to include `{{ .Token }}` (6-digit code, not link)
+- [ ] Set redirect URLs (`http://localhost:3000/**`, Vercel preview pattern, prod)
+- [x] Decide: 6-digit OTP code (matches current UX) vs magic link → **6-digit code**
 
-### Block 2.2: Replace OTP system
-- [ ] Delete `src/server/models/OTP.js`
-- [ ] Stash `src/server/utils/sms.js` for future SMS fallback
-- [ ] Client: replace OTP calls with `supabase.auth.signInWithOtp({ email })` and `verifyOtp`
-- [ ] Update `src/client/src/pages/Auth/*` components
+### Block 2.2: Replace OTP system → ✅ done
+- [x] Delete `src/server/models/OTP.js`
+- [x] Stash `src/server/utils/sms.js` for future SMS fallback (kept on disk, unimported)
+- [x] Client: `signInWithOtp` / `verifyOtp` wired through new `AuthContext`
+- [x] Rewrite `Login.js`, `Register.js`, `ForgotPassword.js`, `Onboarding.js`
 
-### Block 2.3: Replace Clerk + JWT middleware
-- [ ] Server `middleware/auth.js`: validate Supabase JWT
-- [ ] Use `supabase.auth.getUser(token)` or verify JWT with `SUPABASE_JWT_SECRET`
-- [ ] Delete `routes/clerkAuth.js` + Clerk SDK from client deps
-- [ ] Preserve dev-bypass tokens (optional, behind `NODE_ENV=development`)
+### Block 2.3: Replace Clerk + JWT middleware → ✅ done
+- [x] Server `middleware/auth.js`: HS256 verify against `SUPABASE_JWT_SECRET`, load profile + role-row via service-role
+- [x] Add `src/server/db/supabase.js` (service-role + user-scoped clients)
+- [x] Delete `routes/clerkAuth.js` + `@clerk/clerk-react` from client deps
+- [x] Preserve dev-bypass tokens (`dev_token` / `hod_dev_token` under `NODE_ENV=development`, stable UUIDs)
+- [x] Add `POST /api/onboarding` for first-time role-specific row insert
 
-### Block 2.4: Profile sync trigger
-- [ ] Postgres trigger: on `auth.users` insert → create matching `profiles` row with default role
-- [ ] Admin assigns proper role + role-specific data via UI later
+### Block 2.4: Profile sync trigger → ✅ done (Phase 1.4)
+- [x] `on_auth_user_created` on `auth.users` → `handle_new_user()` inserts `profiles` row, `role='student'`
+- [ ] First end-to-end signup smoke test (pending Block 2.1 dashboard config)
 
 **Deliverable:** users sign up, receive email OTP, log in via Supabase Auth end-to-end.
 
