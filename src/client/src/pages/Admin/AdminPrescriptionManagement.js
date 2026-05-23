@@ -163,11 +163,17 @@ const AdminPrescriptionManagement = () => {
     updateStatusMutation.mutate({ prescriptionId, status: newStatus });
   };
 
-  const handleDownloadPrescription = (prescription) => {
-    if (prescription.fileUrl) {
-      window.open(prescription.fileUrl, '_blank');
-    } else {
+  const handleDownloadPrescription = async (prescription) => {
+    if (!(prescription.file_url || prescription.fileUrl)) {
       toast.info('No file available for download');
+      return;
+    }
+    try {
+      const { data } = await axios.get(`/api/prescriptions/${prescription._id || prescription.id}/file-url`);
+      if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+      else toast.error('Failed to open prescription file');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to open prescription file');
     }
   };
 
