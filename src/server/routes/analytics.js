@@ -73,7 +73,7 @@ router.get('/dashboard', async (req, res) => {
       ),
       countWhere(
         sb.from('dispensary_staff').select('id', { count: 'exact', head: true })
-          .eq('staff_type', 'doctor').eq('is_on_duty', true)
+          .eq('staff_type', 'medical_officer').eq('is_on_duty', true)
       ),
       countWhere(
         sb.from('appointments').select('id', { count: 'exact', head: true })
@@ -107,7 +107,7 @@ router.get('/dashboard', async (req, res) => {
         .order('created_at', { ascending: false })
         .limit(5),
       sb.from('profiles').select('id, name, created_at').eq('role', 'student').order('created_at', { ascending: false }).limit(3),
-      sb.from('dispensary_staff').select('id, specialization, total_consultations, current_queue_number, is_on_duty').eq('staff_type', 'doctor'),
+      sb.from('dispensary_staff').select('id, specialization, total_consultations, current_queue_number, is_on_duty').eq('staff_type', 'medical_officer'),
     ]);
 
     // department stats (node-side group_by + percentage)
@@ -391,7 +391,7 @@ router.get('/wait-times', async (req, res) => {
     const { data: onDutyDoctors } = await sb
       .from('dispensary_staff')
       .select('id, average_consultation_time')
-      .eq('staff_type', 'doctor').eq('is_on_duty', true);
+      .eq('staff_type', 'medical_officer').eq('is_on_duty', true);
     const onDutyIds = (onDutyDoctors || []).map((d) => d.id);
     const onDutyNameMap = onDutyIds.length
       ? Object.fromEntries(
