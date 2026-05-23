@@ -94,6 +94,7 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/admin', adminAuthRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/admin', adminRoutes);

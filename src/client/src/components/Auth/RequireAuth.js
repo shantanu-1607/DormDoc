@@ -1,27 +1,26 @@
 import React from 'react';
-import { SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Navigate } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
+import { useAuth } from '../../contexts/AuthContext';
 import { useDevBypass } from '../../contexts/DevBypassContext';
 
-/**
- * Renders children when the user is signed in via Clerk OR when the dev
- * bypass is active (development only). Redirects to /login otherwise.
- */
 const RequireAuth = ({ children }) => {
+  const { session, loading } = useAuth();
   const { active: bypassActive } = useDevBypass();
 
-  if (bypassActive) {
-    return <>{children}</>;
+  if (bypassActive) return <>{children}</>;
+
+  if (loading) {
+    return (
+      <Box display="flex" alignItems="center" justifyContent="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
   }
 
-  return (
-    <>
-      <SignedIn>{children}</SignedIn>
-      <SignedOut>
-        <Navigate to="/login" replace />
-      </SignedOut>
-    </>
-  );
+  if (!session) return <Navigate to="/login" replace />;
+
+  return <>{children}</>;
 };
 
 export default RequireAuth;

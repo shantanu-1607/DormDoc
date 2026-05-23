@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from 'react-query';
 import { motion } from 'framer-motion';
-import { useClerkAuth } from '../../contexts/ClerkAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { fetchDashboardStats } from '../../services/hodService';
 import { palette } from '../../theme';
 import {
@@ -52,7 +52,7 @@ const statusChipFor = (status) => {
 };
 
 const HodDashboard = () => {
-  const { user } = useClerkAuth();
+  const { user } = useAuth();
   const { data, isLoading, isError } = useQuery('hod-dashboard', fetchDashboardStats, {
     staleTime: 2 * 60 * 1000,
   });

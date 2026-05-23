@@ -7,7 +7,7 @@ import {
   Assessment, FileDownload, CalendarMonth,
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
-import { useClerkAuth } from '../../contexts/ClerkAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { downloadMonthlyReport } from '../../services/hodService';
 
 const MONTHS = [
@@ -22,7 +22,7 @@ const currentMonth = new Date().getMonth() + 1; // 1-indexed
 const YEARS = [currentYear, currentYear - 1, currentYear - 2];
 
 const DepartmentReports = () => {
-  const { user } = useClerkAuth();
+  const { user } = useAuth();
   const [selectedYear,  setSelectedYear]  = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [loading, setLoading]             = useState(false);

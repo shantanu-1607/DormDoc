@@ -1,85 +1,51 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   TextField,
   Button,
   Typography,
   Link,
   Alert,
   CircularProgress,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Container,
+  Paper,
+  Stack,
 } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import BITEmblem from '../../components/BITEmblem';
 
+// With Supabase email OTP, signup and login share one flow — the OTP request
+// creates the auth.users row on first use. The post-OTP onboarding form
+// collects the role-specific fields (department, year, hostel for students).
 const Register = () => {
-  const [formData, setFormData] = useState({
-    studentId: '',
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    department: '',
-    year: '',
-    bloodGroup: '',
-    emergencyContact: {
-      name: '',
-      phone: '',
-      relation: ''
-    }
-  });
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [stage, setStage] = useState('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { register } = useAuth();
+  const { signInWithOtp, verifyOtp } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name.startsWith('emergencyContact.')) {
-      const field = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        emergencyContact: {
-          ...prev.emergencyContact,
-          [field]: value
-        }
-      }));
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
-    }
+  const handleSendOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const result = await signInWithOtp(email.trim().toLowerCase());
+    setLoading(false);
+    if (result.success) setStage('otp');
+    else setError(result.message);
   };
 
-  const handleSubmit = async (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    const result = await register(formData);
-    
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.message);
-    }
-    
+    setLoading(true);
+    const result = await verifyOtp(email.trim().toLowerCase(), otp.trim());
     setLoading(false);
+    if (result.success) navigate('/onboarding');
+    else setError(result.message);
   };
 
   return (
@@ -89,201 +55,82 @@ const Register = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #C41E3A 0%, #7B1E1E 100%)',
         p: 2,
       }}
     >
-      <Card sx={{ maxWidth: 600, width: '100%' }}>
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Typography variant="h4" component="h1" gutterBottom>
-              College Dispensary
+      <Container maxWidth="sm">
+        <Paper elevation={6} sx={{ p: { xs: 3, sm: 5 }, borderRadius: 4 }}>
+          <Stack alignItems="center" spacing={1} mb={3}>
+            <BITEmblem size={80} />
+            <Typography variant="h5" fontWeight="bold" color="#C41E3A">
+              Create your DormDoc account
             </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Student Registration
+            <Typography variant="body2" color="text.secondary" textAlign="center">
+              {stage === 'email'
+                ? 'Enter your email. We’ll send a 6-digit code to verify it.'
+                : `Enter the 6-digit code sent to ${email}.`}
             </Typography>
-          </Box>
+          </Stack>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+          {stage === 'email' && (
+            <Box component="form" onSubmit={handleSendOtp}>
+              <TextField
+                fullWidth
+                autoFocus
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                margin="normal"
+                autoComplete="email"
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={loading || !email}
+                sx={{ mt: 2, py: 1.5, backgroundColor: '#C41E3A', '&:hover': { backgroundColor: '#A0172E' } }}
+              >
+                {loading ? <CircularProgress size={22} color="inherit" /> : 'Send verification code'}
+              </Button>
+            </Box>
           )}
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Student ID"
-                  name="studentId"
-                  value={formData.studentId}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Full Name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Department</InputLabel>
-                  <Select
-                    name="department"
-                    value={formData.department}
-                    onChange={handleChange}
-                    label="Department"
-                  >
-                    <MenuItem value="Computer Science">Computer Science</MenuItem>
-                    <MenuItem value="Electronics">Electronics</MenuItem>
-                    <MenuItem value="Mechanical">Mechanical</MenuItem>
-                    <MenuItem value="Civil">Civil</MenuItem>
-                    <MenuItem value="Electrical">Electrical</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Year</InputLabel>
-                  <Select
-                    name="year"
-                    value={formData.year}
-                    onChange={handleChange}
-                    label="Year"
-                  >
-                    <MenuItem value="1st Year">1st Year</MenuItem>
-                    <MenuItem value="2nd Year">2nd Year</MenuItem>
-                    <MenuItem value="3rd Year">3rd Year</MenuItem>
-                    <MenuItem value="4th Year">4th Year</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Blood Group</InputLabel>
-                  <Select
-                    name="bloodGroup"
-                    value={formData.bloodGroup}
-                    onChange={handleChange}
-                    label="Blood Group"
-                  >
-                    <MenuItem value="A+">A+</MenuItem>
-                    <MenuItem value="A-">A-</MenuItem>
-                    <MenuItem value="B+">B+</MenuItem>
-                    <MenuItem value="B-">B-</MenuItem>
-                    <MenuItem value="AB+">AB+</MenuItem>
-                    <MenuItem value="AB-">AB-</MenuItem>
-                    <MenuItem value="O+">O+</MenuItem>
-                    <MenuItem value="O-">O-</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Confirm Password"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  Emergency Contact
-                </Typography>
-              </Grid>
-              
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="Contact Name"
-                  name="emergencyContact.name"
-                  value={formData.emergencyContact.name}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="Contact Phone"
-                  name="emergencyContact.phone"
-                  value={formData.emergencyContact.phone}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="Relation"
-                  name="emergencyContact.relation"
-                  value={formData.emergencyContact.relation}
-                  onChange={handleChange}
-                  required
-                />
-              </Grid>
-            </Grid>
-
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Register'}
-            </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link component={RouterLink} to="/login" variant="body2">
-                Already have an account? Sign in
-              </Link>
+          {stage === 'otp' && (
+            <Box component="form" onSubmit={handleVerifyOtp}>
+              <TextField
+                fullWidth
+                autoFocus
+                label="6-digit code"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                required
+                margin="normal"
+                inputProps={{ inputMode: 'numeric', pattern: '[0-9]{6}', maxLength: 6 }}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={loading || otp.length !== 6}
+                sx={{ mt: 2, py: 1.5, backgroundColor: '#C41E3A', '&:hover': { backgroundColor: '#A0172E' } }}
+              >
+                {loading ? <CircularProgress size={22} color="inherit" /> : 'Verify & continue'}
+              </Button>
             </Box>
+          )}
+
+          <Box textAlign="center" mt={3}>
+            <Link component={RouterLink} to="/login" variant="body2" sx={{ color: '#C41E3A' }}>
+              Already have an account? Sign in
+            </Link>
           </Box>
-        </CardContent>
-      </Card>
+        </Paper>
+      </Container>
     </Box>
   );
 };

@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { ClerkProvider } from '@clerk/clerk-react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ToastContainer } from 'react-toastify';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { ClerkAuthProvider } from './contexts/ClerkAuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { DevBypassProvider } from './contexts/DevBypassContext';
+import { SocketProvider } from './contexts/SocketContext';
 import RequireAuth from './components/Auth/RequireAuth';
 import DevBypassBanner from './components/DevBypassBanner';
 import Layout from './components/Layout/Layout';
 import DashboardRouter from './components/DashboardRouter';
 import LocationGate from './components/LocationGate';
-import ClerkLogin from './pages/Auth/ClerkLogin';
-import ClerkRegister from './pages/Auth/ClerkRegister';
-import TestPage from './TestPage';
+import Login from './pages/Auth/Login';
+import Register from './pages/Auth/Register';
+import ForgotPassword from './pages/Auth/ForgotPassword';
+import Onboarding from './pages/Auth/Onboarding';
 import Profile from './pages/Profile/Profile';
 import Appointments from './pages/Student/Appointments';
 import BookAppointment from './pages/Student/BookAppointment';
@@ -37,7 +38,6 @@ import AmbulanceTracking from './pages/Admin/AmbulanceTracking';
 import DoctorDashboard from './pages/Doctor/DoctorDashboard';
 import PatientChat from './pages/Doctor/PatientChat';
 import LoginInfo from './pages/Admin/LoginInfo';
-import Onboarding from './pages/Auth/Onboarding';
 import RoleRoute from './components/Auth/RoleRoute';
 import LeaveApprovals from './pages/HOD/LeaveApprovals';
 import DepartmentAnalytics from './pages/HOD/DepartmentAnalytics';
@@ -45,35 +45,17 @@ import DepartmentStudents from './pages/HOD/DepartmentStudents';
 import ActiveCases from './pages/HOD/ActiveCases';
 import DepartmentReports from './pages/HOD/DepartmentReports';
 
-// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
+    queries: { retry: 1, refetchOnWindowFocus: false },
   },
 });
-
-// Get Clerk publishable key
-const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY || 'pk_test_Zmx1ZW50LXN3YW4tNjYuY2xlcmsuYWNjb3VudHMuZGV2JA';
-
-// Debug environment variables
-console.log('Environment check:');
-console.log('REACT_APP_CLERK_PUBLISHABLE_KEY:', clerkPubKey);
-console.log('All env vars:', process.env);
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('PUBLIC_URL:', process.env.PUBLIC_URL);
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate app initialization
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-
+    const timer = setTimeout(() => setIsLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);
 
@@ -88,161 +70,93 @@ function App() {
         gap={2}
       >
         <CircularProgress size={60} />
-        <Typography variant="h6">Loading College Dispensary System...</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Please wait while we initialize the application
-        </Typography>
+        <Typography variant="h6">Loading DormDoc…</Typography>
       </Box>
     );
   }
 
-  if (!clerkPubKey) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontFamily: 'Arial, sans-serif',
-        flexDirection: 'column',
-        gap: '20px'
-      }}>
-        <div>
-          <h2>Missing Clerk Publishable Key</h2>
-          <p>Please set REACT_APP_CLERK_PUBLISHABLE_KEY in your environment variables.</p>
-          <p>Current value: {clerkPubKey || 'undefined'}</p>
-          <p>Environment: {process.env.NODE_ENV}</p>
-        </div>
-        <div style={{ 
-          background: '#f5f5f5', 
-          padding: '20px', 
-          borderRadius: '8px',
-          fontFamily: 'monospace',
-          fontSize: '12px'
-        }}>
-          <h4>Debug Info:</h4>
-          <p>REACT_APP_CLERK_PUBLISHABLE_KEY: {process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}</p>
-          <p>REACT_APP_API_URL: {process.env.REACT_APP_API_URL}</p>
-          <p>NODE_ENV: {process.env.NODE_ENV}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Temporary diagnostic - show test page if Clerk key is missing
-  if (!process.env.REACT_APP_CLERK_PUBLISHABLE_KEY || process.env.REACT_APP_CLERK_PUBLISHABLE_KEY === 'undefined') {
-    return <TestPage />;
-  }
-
   return (
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <QueryClientProvider client={queryClient}>
-        <DevBypassProvider>
-        <ClerkAuthProvider>
-          <Router>
-            <LocationGate>
-            <Routes>
-              {/* Public Root Route - Always show the role selection/login first */}
-              <Route path="/" element={<ClerkLogin />} />
-              <Route path="/login" element={<ClerkLogin />} />
-              <Route path="/register" element={<ClerkRegister />} />
-              <Route path="/onboarding" element={<Onboarding />} />
+    <QueryClientProvider client={queryClient}>
+      <DevBypassProvider>
+        <AuthProvider>
+          <SocketProvider>
+            <Router>
+              <LocationGate>
+                <Routes>
+                  <Route path="/" element={<Login />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
 
-              {/* Protected Routes */}
-              <Route
-                path="/*"
-                element={
-                  <RequireAuth>
-                    <Layout>
-                      <Routes>
-                          {/* Dynamic Dashboard Route */}
-                          <Route path="dashboard" element={<DashboardRouter />} />
-                          <Route index element={<Navigate to="dashboard" replace />} />
-                          
-                          {/* Student Routes */}
-                          <Route path="appointments" element={<Appointments />} />
-                          <Route path="book-appointment" element={<BookAppointment />} />
-                          <Route path="emergency-sos" element={<EmergencySOS />} />
-                          <Route path="ambulance-booking" element={<AmbulanceBooking />} />
-                          <Route path="prescriptions" element={<PrescriptionManagement />} />
-                          <Route path="leave-application" element={<LeaveApplication />} />
-                          <Route path="chatbot" element={<ChatbotPage />} />
-                          
-                          {/* Admin Routes */}
-                          <Route path="doctors" element={<DoctorManagement />} />
-                          <Route path="ambulances" element={<AmbulanceManagement />} />
-                          <Route path="queue" element={<QueueManagement />} />
-                          <Route path="analytics" element={<Analytics />} />
-                          <Route path="admin-prescriptions" element={<AdminPrescriptionManagement />} />
-                          <Route path="inventory" element={<InventoryManagement />} />
-                          <Route path="ambulance-tracking" element={<AmbulanceTracking />} />
-                          <Route path="leave-requests" element={<LeaveRequests />} />
-                          <Route path="qr-scanner" element={<QRScanner />} />
-                          <Route path="login-info" element={<LoginInfo />} />
-                          
-                          {/* Doctor Routes */}
-                          <Route path="doctor-dashboard" element={<DoctorDashboard />} />
-                          <Route path="patient-chat" element={<PatientChat />} />
+                  <Route
+                    path="/*"
+                    element={
+                      <RequireAuth>
+                        <Layout>
+                          <Routes>
+                            <Route path="dashboard" element={<DashboardRouter />} />
+                            <Route index element={<Navigate to="dashboard" replace />} />
 
-                          {/* HOD Routes — protected by RoleRoute */}
-                          <Route
-                            path="hod/leave-approvals"
-                            element={
-                              <RoleRoute roles={['hod']}>
-                                <LeaveApprovals />
-                              </RoleRoute>
-                            }
-                          />
-                          <Route
-                            path="hod/analytics"
-                            element={
-                              <RoleRoute roles={['hod']}>
-                                <DepartmentAnalytics />
-                              </RoleRoute>
-                            }
-                          />
-                          <Route
-                            path="hod/students"
-                            element={
-                              <RoleRoute roles={['hod']}>
-                                <DepartmentStudents />
-                              </RoleRoute>
-                            }
-                          />
-                          <Route
-                            path="hod/active-cases"
-                            element={
-                              <RoleRoute roles={['hod']}>
-                                <ActiveCases />
-                              </RoleRoute>
-                            }
-                          />
-                          <Route
-                            path="hod/reports"
-                            element={
-                              <RoleRoute roles={['hod']}>
-                                <DepartmentReports />
-                              </RoleRoute>
-                            }
-                          />
+                            <Route path="appointments" element={<Appointments />} />
+                            <Route path="book-appointment" element={<BookAppointment />} />
+                            <Route path="emergency-sos" element={<EmergencySOS />} />
+                            <Route path="ambulance-booking" element={<AmbulanceBooking />} />
+                            <Route path="prescriptions" element={<PrescriptionManagement />} />
+                            <Route path="leave-application" element={<LeaveApplication />} />
+                            <Route path="chatbot" element={<ChatbotPage />} />
 
-                          {/* Profile Route */}
-                          <Route path="profile" element={<Profile />} />
-                      </Routes>
-                    </Layout>
-                  </RequireAuth>
-                }
-              />
-            </Routes>
-            </LocationGate>
-            <ChatbotComponent />
-            <ToastContainer />
-            <DevBypassBanner />
-          </Router>
-        </ClerkAuthProvider>
-        </DevBypassProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+                            <Route path="doctors" element={<DoctorManagement />} />
+                            <Route path="ambulances" element={<AmbulanceManagement />} />
+                            <Route path="queue" element={<QueueManagement />} />
+                            <Route path="analytics" element={<Analytics />} />
+                            <Route path="admin-prescriptions" element={<AdminPrescriptionManagement />} />
+                            <Route path="inventory" element={<InventoryManagement />} />
+                            <Route path="ambulance-tracking" element={<AmbulanceTracking />} />
+                            <Route path="leave-requests" element={<LeaveRequests />} />
+                            <Route path="qr-scanner" element={<QRScanner />} />
+                            <Route path="login-info" element={<LoginInfo />} />
+
+                            <Route path="doctor-dashboard" element={<DoctorDashboard />} />
+                            <Route path="patient-chat" element={<PatientChat />} />
+
+                            <Route
+                              path="hod/leave-approvals"
+                              element={<RoleRoute roles={['hod']}><LeaveApprovals /></RoleRoute>}
+                            />
+                            <Route
+                              path="hod/analytics"
+                              element={<RoleRoute roles={['hod']}><DepartmentAnalytics /></RoleRoute>}
+                            />
+                            <Route
+                              path="hod/students"
+                              element={<RoleRoute roles={['hod']}><DepartmentStudents /></RoleRoute>}
+                            />
+                            <Route
+                              path="hod/active-cases"
+                              element={<RoleRoute roles={['hod']}><ActiveCases /></RoleRoute>}
+                            />
+                            <Route
+                              path="hod/reports"
+                              element={<RoleRoute roles={['hod']}><DepartmentReports /></RoleRoute>}
+                            />
+
+                            <Route path="profile" element={<Profile />} />
+                          </Routes>
+                        </Layout>
+                      </RequireAuth>
+                    }
+                  />
+                </Routes>
+              </LocationGate>
+              <ChatbotComponent />
+              <ToastContainer />
+              <DevBypassBanner />
+            </Router>
+          </SocketProvider>
+        </AuthProvider>
+      </DevBypassProvider>
+    </QueryClientProvider>
   );
 }
 

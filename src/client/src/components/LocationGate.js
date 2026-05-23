@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, CircularProgress, Button, Paper } from '@mui/material';
 import { LocationOff, LocationOn, ErrorOutline, AdminPanelSettings } from '@mui/icons-material';
-import { useClerkAuth } from '../contexts/ClerkAuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // BIT Mesra Coordinates
 const BIT_LAT = 23.4123;
@@ -22,7 +22,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 const LocationGate = ({ children }) => {
-  const { user } = useClerkAuth();
+  const { user } = useAuth();
   const [locationStatus, setLocationStatus] = useState('initial'); // 'initial', 'checking', 'allowed', 'blocked', 'error', 'prompt'
   const [distance, setDistance] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');

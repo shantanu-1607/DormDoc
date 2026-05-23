@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import { useClerkAuth } from '../../contexts/ClerkAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * RoleRoute — client-side route guard.
@@ -18,7 +18,7 @@ import { useClerkAuth } from '../../contexts/ClerkAuthContext';
  *   </RoleRoute>
  */
 const RoleRoute = ({ roles, children }) => {
-  const { user, loading } = useClerkAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (

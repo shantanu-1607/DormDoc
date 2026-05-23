@@ -34,7 +34,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { useClerkAuth } from '../../contexts/ClerkAuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { palette } from '../../theme';
 
 const greetingFor = (date) => {
@@ -150,7 +150,7 @@ const QuickAction = ({ icon: Icon, label, color, onClick }) => (
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const { mongoUser } = useClerkAuth();
+  const { mongoUser } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {

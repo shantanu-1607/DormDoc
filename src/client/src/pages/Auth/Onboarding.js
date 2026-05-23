@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Container,
@@ -10,164 +10,74 @@ import {
   MenuItem,
   CircularProgress,
   Stack,
-  Chip,
-  Alert,
-  InputAdornment,
 } from '@mui/material';
-import {
-  Verified,
-  Phone as PhoneIcon,
-  ShieldOutlined,
-  AccountCircleOutlined,
-  ChevronRight,
-} from '@mui/icons-material';
+import { AccountCircleOutlined, ChevronRight } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useClerkAuth } from '../../contexts/ClerkAuthContext';
+import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
 import { palette } from '../../theme';
 
+const DEPARTMENTS = ['Computer Science', 'Electronics', 'Mechanical', 'Civil', 'Other'];
+const YEARS = ['1st', '2nd', '3rd', '4th', '5th'];
+const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
 const Onboarding = () => {
-  const { user, setNeedsOnboarding, setMongoUser } = useClerkAuth();
+  const { user, setNeedsOnboarding } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [provider, setProvider] = useState(null);
-  const [devFallback, setDevFallback] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
-  const tickRef = useRef(null);
 
-  const [formData, setFormData] = useState({
+  const role = user?.role || 'student';
+
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
     studentId: '',
     department: '',
     year: '1st',
+    hostel: '',
+    roomNumber: '',
     bloodGroup: 'O+',
+    facultyId: '',
+    designation: 'Assistant Professor',
   });
-
-  const role = user?.role || 'student';
 
   useEffect(() => {
     if (!user) navigate('/login');
   }, [user, navigate]);
 
-  useEffect(() => {
-    if (resendIn <= 0) return undefined;
-    tickRef.current = setInterval(() => {
-      setResendIn((s) => (s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => clearInterval(tickRef.current);
-  }, [resendIn]);
-
-  const startCooldown = (seconds = 30) => setResendIn(seconds);
-
-  const handleSendOtp = async () => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length !== 10) {
-      toast.error('Please enter a 10-digit Indian mobile number');
-      return;
-    }
-    setSending(true);
-    try {
-      const res = await fetch('/api/clerk-auth/send-mobile-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: digits }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setOtpSent(true);
-        setProvider(data.provider || null);
-        setDevFallback(!!data.devFallback);
-        startCooldown(30);
-        toast.success(
-          data.devFallback
-            ? 'OTP generated — check the server console (dev mode).'
-            : `OTP sent via ${data.provider || 'SMS'}.`
-        );
-      } else if (res.status === 429) {
-        toast.error(data.error || 'Please wait before requesting another OTP.');
-      } else {
-        toast.error(data.error || 'Failed to send OTP');
-      }
-    } catch (err) {
-      toast.error('Network error — could not reach the server');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendIn > 0) return;
-    await handleSendOtp();
-  };
-
-  const handleVerifyOtp = async () => {
-    const digits = phone.replace(/\D/g, '');
-    if (otp.length !== 6) {
-      toast.error('Enter the 6-digit code from the SMS');
-      return;
-    }
-    setVerifying(true);
-    try {
-      const res = await fetch('/api/clerk-auth/verify-mobile-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: digits, otp }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPhoneVerified(true);
-        toast.success('Phone verified.');
-      } else {
-        toast.error(
-          data.attemptsLeft != null
-            ? `${data.error} (${data.attemptsLeft} attempt${data.attemptsLeft === 1 ? '' : 's'} left)`
-            : data.error || 'Invalid OTP'
-        );
-      }
-    } catch (err) {
-      toast.error('Network error — could not reach the server');
-    } finally {
-      setVerifying(false);
-    }
-  };
+  const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!phoneVerified) {
-      toast.error('Please verify your phone number first.');
-      return;
-    }
-
     setLoading(true);
     try {
-      const payload = {
-        clerkUserId: user._id,
+      await axios.put('/api/auth/profile', { name: form.name, phone: form.phone });
+      await axios.post('/api/onboarding', {
         role,
-        data: { ...formData, phone: phone.replace(/\D/g, '') },
-      };
-
-      const res = await fetch('/api/clerk-auth/onboarding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        data:
+          role === 'student'
+            ? {
+                student_id: form.studentId,
+                department: form.department,
+                year: form.year,
+                hostel: form.hostel || null,
+                room_number: form.roomNumber || null,
+                blood_group: form.bloodGroup,
+              }
+            : role === 'faculty' || role === 'hod'
+            ? {
+                faculty_id: form.facultyId,
+                department: form.department,
+                designation: form.designation,
+              }
+            : {},
       });
-      const data = await res.json();
-
-      if (res.ok) {
-        toast.success('Profile completed.');
-        setNeedsOnboarding(false);
-        if (data.user) setMongoUser(data.user);
-        setTimeout(() => navigate('/dashboard'), 800);
-      } else {
-        toast.error(data.error || 'Failed to save profile');
-      }
+      toast.success('Profile completed.');
+      setNeedsOnboarding(false);
+      setTimeout(() => navigate('/dashboard'), 600);
     } catch (err) {
-      toast.error('An error occurred during onboarding');
+      toast.error(err.response?.data?.message || 'Failed to save profile');
     } finally {
       setLoading(false);
     }
@@ -190,18 +100,8 @@ const Onboarding = () => {
         sx={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: "url('/assets/bit_campus.jpg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.22,
-        }}
-      />
-      <Box
-        aria-hidden
-        sx={{
-          position: 'absolute',
-          inset: 0,
-          background: `linear-gradient(135deg, rgba(92, 15, 15, 0.78) 0%, rgba(26, 43, 92, 0.78) 60%, rgba(6, 11, 34, 0.92) 100%)`,
+          background:
+            'linear-gradient(135deg, rgba(92, 15, 15, 0.78) 0%, rgba(26, 43, 92, 0.78) 60%, rgba(6, 11, 34, 0.92) 100%)',
         }}
       />
       <Container maxWidth="sm" sx={{ position: 'relative' }}>
@@ -229,7 +129,10 @@ const Onboarding = () => {
               <AccountCircleOutlined />
             </Box>
             <Box>
-              <Typography variant="overline" sx={{ color: palette.navy.light, letterSpacing: '0.22em' }}>
+              <Typography
+                variant="overline"
+                sx={{ color: palette.navy.light, letterSpacing: '0.22em' }}
+              >
                 One more step
               </Typography>
               <Typography
@@ -246,117 +149,38 @@ const Onboarding = () => {
             </Box>
           </Stack>
           <Typography sx={{ color: palette.navy.light, mb: 3 }}>
-            Add your contact and {role} details to unlock the DormDoc portal.
+            Add your {role} details to unlock the DormDoc portal.
           </Typography>
 
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2.5}>
-              {/* Phone */}
-              <Grid item xs={12}>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                  <ShieldOutlined sx={{ fontSize: 18, color: palette.maroon.main }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: palette.navy.dark }}>
-                    Mobile verification
-                  </Typography>
-                  {phoneVerified && (
-                    <Chip
-                      label="Verified"
-                      size="small"
-                      icon={<Verified sx={{ fontSize: '14px !important' }} />}
-                      sx={{
-                        height: 22,
-                        backgroundColor: '#2F7D5A1f',
-                        color: '#2F7D5A',
-                        fontWeight: 700,
-                      }}
-                    />
-                  )}
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                  <TextField
-                    fullWidth
-                    label="Phone number"
-                    placeholder="10-digit Indian number"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    disabled={phoneVerified || otpSent}
-                    required
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <PhoneIcon sx={{ fontSize: 18, color: palette.navy.light }} />
-                          <Typography sx={{ ml: 0.5, color: palette.navy.dark, fontWeight: 600 }}>+91</Typography>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  {!phoneVerified && !otpSent && (
-                    <Button
-                      variant="contained"
-                      onClick={handleSendOtp}
-                      disabled={sending}
-                      sx={{ minWidth: 120 }}
-                    >
-                      {sending ? <CircularProgress size={20} color="inherit" /> : 'Send OTP'}
-                    </Button>
-                  )}
-                </Stack>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Full name"
+                  value={form.name}
+                  onChange={(e) => update('name', e.target.value)}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Phone (optional)"
+                  value={form.phone}
+                  onChange={(e) => update('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="10-digit number"
+                />
               </Grid>
 
-              {otpSent && !phoneVerified && (
-                <>
-                  <Grid item xs={12}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <TextField
-                        fullWidth
-                        label="Enter 6-digit OTP"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        inputProps={{ inputMode: 'numeric', maxLength: 6, style: { letterSpacing: '0.4em', fontWeight: 600 } }}
-                      />
-                      <Button
-                        variant="contained"
-                        onClick={handleVerifyOtp}
-                        disabled={verifying || otp.length !== 6}
-                        sx={{ minWidth: 110 }}
-                      >
-                        {verifying ? <CircularProgress size={20} color="inherit" /> : 'Verify'}
-                      </Button>
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
-                      <Typography variant="caption" sx={{ color: palette.navy.light }}>
-                        Sent to +91 {phone}
-                        {provider && !devFallback ? ` · via ${provider}` : ''}
-                      </Typography>
-                      <Button
-                        size="small"
-                        onClick={handleResend}
-                        disabled={resendIn > 0 || sending}
-                        sx={{ color: palette.maroon.main, textTransform: 'none' }}
-                      >
-                        {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend OTP'}
-                      </Button>
-                    </Stack>
-                  </Grid>
-                  {devFallback && (
-                    <Grid item xs={12}>
-                      <Alert severity="info" sx={{ py: 0.5 }}>
-                        Dev mode — the code was logged to the server console. Configure an SMS provider in <code>.env</code> to send real messages.
-                      </Alert>
-                    </Grid>
-                  )}
-                </>
-              )}
-
-              {/* Student fields */}
               {role === 'student' && (
                 <>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       label="Roll number / Student ID"
-                      value={formData.studentId}
-                      onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                      value={form.studentId}
+                      onChange={(e) => update('studentId', e.target.value)}
                       required
                     />
                   </Grid>
@@ -365,11 +189,11 @@ const Onboarding = () => {
                       fullWidth
                       select
                       label="Department"
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      value={form.department}
+                      onChange={(e) => update('department', e.target.value)}
                       required
                     >
-                      {['Computer Science', 'Electronics', 'Mechanical', 'Civil', 'Other'].map((d) => (
+                      {DEPARTMENTS.map((d) => (
                         <MenuItem key={d} value={d}>
                           {d}
                         </MenuItem>
@@ -381,10 +205,10 @@ const Onboarding = () => {
                       fullWidth
                       select
                       label="Year"
-                      value={formData.year}
-                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                      value={form.year}
+                      onChange={(e) => update('year', e.target.value)}
                     >
-                      {['1st', '2nd', '3rd', '4th', '5th'].map((y) => (
+                      {YEARS.map((y) => (
                         <MenuItem key={y} value={y}>
                           {y}
                         </MenuItem>
@@ -396,40 +220,56 @@ const Onboarding = () => {
                       fullWidth
                       select
                       label="Blood group"
-                      value={formData.bloodGroup}
-                      onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
+                      value={form.bloodGroup}
+                      onChange={(e) => update('bloodGroup', e.target.value)}
                     >
-                      {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((b) => (
+                      {BLOOD_GROUPS.map((b) => (
                         <MenuItem key={b} value={b}>
                           {b}
                         </MenuItem>
                       ))}
                     </TextField>
                   </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Hostel (optional)"
+                      value={form.hostel}
+                      onChange={(e) => update('hostel', e.target.value)}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Room number (optional)"
+                      value={form.roomNumber}
+                      onChange={(e) => update('roomNumber', e.target.value)}
+                    />
+                  </Grid>
                 </>
               )}
 
               {(role === 'faculty' || role === 'hod') && (
                 <>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       label="Faculty ID"
-                      value={formData.studentId}
-                      onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                      value={form.facultyId}
+                      onChange={(e) => update('facultyId', e.target.value)}
                       required
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
                       select
                       label="Department"
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      value={form.department}
+                      onChange={(e) => update('department', e.target.value)}
                       required
                     >
-                      {['Computer Science', 'Electronics', 'Mechanical', 'Civil', 'Other'].map((d) => (
+                      {DEPARTMENTS.map((d) => (
                         <MenuItem key={d} value={d}>
                           {d}
                         </MenuItem>
@@ -445,11 +285,15 @@ const Onboarding = () => {
                   fullWidth
                   variant="contained"
                   size="large"
-                  disabled={loading || !phoneVerified}
+                  disabled={loading}
                   endIcon={!loading && <ChevronRight />}
                   sx={{ mt: 1, py: 1.4 }}
                 >
-                  {loading ? <CircularProgress size={22} color="inherit" /> : 'Complete setup & enter dashboard'}
+                  {loading ? (
+                    <CircularProgress size={22} color="inherit" />
+                  ) : (
+                    'Complete setup & enter dashboard'
+                  )}
                 </Button>
               </Grid>
             </Grid>

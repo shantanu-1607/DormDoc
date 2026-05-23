@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Navigate } from 'react-router-dom';
-import { useClerkAuth } from '../contexts/ClerkAuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import StudentDashboard from '../pages/Student/StudentDashboard';
 import DoctorDashboard from '../pages/Doctor/DoctorDashboard';
 import AdminDashboard from '../pages/Admin/AdminDashboard';
@@ -9,7 +9,7 @@ import HodDashboard from '../pages/HOD/HodDashboard';
 import ParentDashboard from '../pages/Parent/ParentDashboard';
 
 const DashboardRouter = () => {
-  const { user, needsOnboarding } = useClerkAuth();
+  const { user, needsOnboarding } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" />;
