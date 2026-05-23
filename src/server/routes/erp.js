@@ -46,9 +46,8 @@ async function safeSendMail(mailOptions) {
   }
 }
 
-function emitIo(req, event, payload) {
-  if (req.io) req.io.emit(event, payload);
-}
+// Phase 4: socket.io emits removed. Clients subscribe to public.leave_requests
+// via supabase_realtime postgres_changes.
 
 async function loadStudentContext(sb, studentUuid) {
   const [{ data: profile }, { data: studentRow }] = await Promise.all([
@@ -191,15 +190,6 @@ router.post(
         `,
       });
 
-      emitIo(req, 'leave-request-submitted', {
-        studentId,
-        appointmentId,
-        leaveRequestId: inserted.id,
-        duration,
-        reason,
-        timestamp: new Date(),
-      });
-
       res.json({
         message: 'Leave request submitted successfully',
         leaveRequest: toClientLeaveRequest(inserted, appointment),
@@ -339,15 +329,6 @@ router.put(
 
           <p>If you have any questions, please contact your department office.</p>
         `,
-      });
-
-      emitIo(req, 'leave-request-processed', {
-        studentId: leaveRequest.student_id,
-        appointmentId,
-        leaveRequestId: leaveRequest.id,
-        action: newStatus,
-        approvedBy: approver.name,
-        timestamp: new Date(),
       });
 
       res.json({

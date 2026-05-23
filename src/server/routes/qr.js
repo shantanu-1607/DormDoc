@@ -53,9 +53,9 @@ async function findActiveAppointment(sb, studentUuid, { emergencyOnly = false } 
   return data?.[0] || null;
 }
 
-async function emitIo(req, event, payload) {
-  if (req.io) req.io.emit(event, payload);
-}
+// Phase 4: socket.io emits removed. QR scan events were ephemeral (no scan
+// log table backs them), so the toasts they used to trigger are gone too.
+// If a scan log is ever introduced, add it to supabase_realtime.
 
 // ─── routes ─────────────────────────────────────────────────────────────────
 
@@ -102,14 +102,6 @@ router.post(
         default:
           return res.status(400).json({ message: 'Invalid scan type' });
       }
-
-      emitIo(req, 'qr-scan-processed', {
-        scanType,
-        studentId: student.id,
-        studentName: student.name,
-        timestamp: new Date(),
-        result,
-      });
 
       res.json({
         message: 'QR code processed successfully',
@@ -226,12 +218,6 @@ router.post(
         }
       }
 
-      emitIo(req, 'bulk-qr-scan-completed', {
-        totalScans: scans.length,
-        successfulScans: results.length,
-        failedScans: scanErrors.length,
-        timestamp: new Date(),
-      });
 
       res.json({
         message: 'Bulk scan processing completed',

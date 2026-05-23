@@ -32,9 +32,8 @@ function calculateEstimatedWaitTime(ambulance, pickupLocation) {
   return Math.max(5, minutes);
 }
 
-function emitIo(req, event, payload) {
-  if (req.io) req.io.emit(event, payload);
-}
+// Phase 4: socket.io emits removed. Clients subscribe to public.ambulances
+// and public.ambulance_trips via supabase_realtime postgres_changes.
 
 async function getCurrentAssignment(sb, ambulanceId) {
   const { data } = await sb
@@ -190,16 +189,6 @@ router.post(
       const { error: ambErr } = await sb.from('ambulances').update({ status: 'in_use' }).eq('id', ambulance.id);
       if (ambErr) console.error('ambulance status update failed:', ambErr);
 
-      emitIo(req, 'ambulance-assigned', {
-        studentId: student.id,
-        ambulanceId: ambulance.id,
-        vehicleNumber: ambulance.vehicle_number,
-        driverName: ambulance.driver_name,
-        driverPhone: ambulance.driver_phone,
-        estimatedArrival: estimatedWaitMinutes,
-        tripId: trip.id,
-      });
-
       res.status(201).json({
         message: 'Ambulance request submitted successfully',
         ambulance: {
@@ -252,12 +241,6 @@ router.put(
           .eq('id', active.id);
       }
 
-      emitIo(req, 'ambulance-location-updated', {
-        ambulanceId: id,
-        location: { latitude, longitude, address },
-        timestamp: new Date(),
-      });
-
       res.json({ message: 'Ambulance location updated successfully', location: { latitude, longitude, address } });
     } catch (error) {
       console.error('Update ambulance location error:', error);
@@ -306,12 +289,6 @@ router.put('/:id/complete-trip', async (req, res) => {
       .select()
       .single();
     if (updErr) throw updErr;
-
-    emitIo(req, 'ambulance-trip-completed', {
-      ambulanceId: id,
-      vehicleNumber: ambulance.vehicle_number,
-      status: updated.status,
-    });
 
     res.json({
       message: 'Ambulance trip completed successfully',
@@ -423,13 +400,6 @@ router.post(
       if (severity === 'critical') {
         await sb.from('ambulances').update({ status: 'maintenance' }).eq('id', id);
       }
-
-      emitIo(req, 'ambulance-issue-reported', {
-        ambulanceId: id,
-        vehicleNumber: ambulance.vehicle_number,
-        issue: { description, severity },
-        timestamp: new Date(),
-      });
 
       res.json({
         message: 'Issue reported successfully',

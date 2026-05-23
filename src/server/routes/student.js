@@ -184,7 +184,8 @@ router.post(
         .update({ current_queue_number: (doctor.current_queue_number || 0) + 1 })
         .eq('id', doctorId);
 
-      if (req.io) req.io.emit('appointment-booked', { appointment, doctorId, studentName: req.user.name });
+      // Realtime: clients subscribed to public.appointments via supabase_realtime
+      // get the INSERT event automatically (Phase 4).
 
       res.status(201).json({ message: 'Appointment booked successfully', appointment });
     } catch (error) {
@@ -324,13 +325,8 @@ router.post(
 
       await sb.from('ambulances').update({ status: 'on_trip' }).eq('id', ambulance.id);
 
-      if (req.io) {
-        req.io.emit('ambulance-assigned', {
-          studentId: req.user.id,
-          ambulanceId: ambulance.id,
-          vehicleNumber: ambulance.vehicle_number,
-        });
-      }
+      // Realtime: clients subscribed to public.ambulance_trips get the INSERT
+      // event automatically (Phase 4).
 
       res.status(201).json({
         message: 'Ambulance booked successfully',
@@ -395,16 +391,8 @@ router.post(
         await sb.from('ambulances').update({ status: 'on_trip' }).eq('id', ambulance.id);
       }
 
-      if (req.io) {
-        req.io.emit('emergency-sos', {
-          studentId: req.user.id,
-          studentName: req.user.name,
-          symptoms,
-          location,
-          timestamp: new Date(),
-          tripId: trip?.id ?? null,
-        });
-      }
+      // Realtime: emergency dispatch shows up via the ambulance_trips INSERT
+      // (priority='high' drives the admin SOS toast on the client).
 
       res.status(201).json({
         message: 'Emergency SOS sent successfully',

@@ -8,9 +8,9 @@ router.use(authenticateToken, requireRole(['admin']));
 const ACTIVE_STATUSES = ['pending', 'dispatched', 'en_route', 'arrived'];
 const NORMALIZE_STATUS = (s) => (s === 'en-route' ? 'en_route' : s); // legacy compat
 
-function emitIo(req, event, payload) {
-  if (req.io) req.io.emit(event, payload);
-}
+// Phase 4: socket.io emits removed. Clients subscribe to public.ambulance_trips
+// via supabase_realtime postgres_changes; trip status history lives in
+// ambulance_trip_status_log (also a candidate for realtime if needed later).
 
 async function hydrate(sb, trips) {
   const rows = trips || [];
@@ -186,13 +186,6 @@ router.put('/admin/ambulance-trips/:id/status', async (req, res) => {
       updated_by: req.user.id,
     });
 
-    emitIo(req, 'ambulance-trip-status-updated', {
-      tripId: id,
-      status,
-      location: location || null,
-      timestamp: new Date(),
-    });
-
     const [hydrated] = await hydrate(sb, [updated]);
     res.json(hydrated);
   } catch (error) {
@@ -233,8 +226,6 @@ router.put('/admin/ambulance-trips/:id/complete', async (req, res) => {
       status: 'completed',
       updated_by: req.user.id,
     });
-
-    emitIo(req, 'ambulance-trip-completed', { tripId: id, timestamp: completedTs });
 
     const [hydrated] = await hydrate(sb, [updated]);
     res.json(hydrated);

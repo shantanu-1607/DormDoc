@@ -2,8 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const http = require('http');
-const socketIo = require('socket.io');
 // Load .env first (committed defaults), then .env.local on top (gitignored secrets).
 require('dotenv').config();
 require('dotenv').config({ path: require('path').resolve(process.cwd(), '.env.local'), override: true });
@@ -25,13 +23,6 @@ const inventoryRoutes = require('./routes/inventory');
 const ambulanceTrackingRoutes = require('./routes/ambulance-tracking');
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
-});
 
 // Trust proxy for rate limiting
 app.set('trust proxy', 1);
@@ -55,28 +46,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Database: Supabase (see src/server/db/supabase.js). The old MongoDB
-// connection block was removed at the end of Phase 3 — every route now
-// uses req.sb / supabaseAdmin.
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  socket.on('join-room', (room) => {
-    socket.join(room);
-    console.log(`User ${socket.id} joined room: ${room}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
-
-// Make io accessible to routes
-app.use((req, res, next) => {
-  req.io = io;
-  next();
-});
+// connection block was removed at the end of Phase 3.
+// Realtime: Supabase Realtime publication (see migration phase4_realtime_publication).
+// The legacy socket.io server was removed in Phase 4 — clients now subscribe
+// to postgres_changes directly via the @supabase/supabase-js client.
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -123,9 +96,9 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
-module.exports = { app, io };
+module.exports = { app };
