@@ -29,9 +29,20 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
+
+// CORS — CLIENT_URL is a comma-separated list so dev (localhost:3000) and any
+// number of prod origins (Railway, custom domain, preview deploys) can all be
+// served by one deployment without code changes. A request with no Origin
+// header (curl, server-side fetch) is always allowed.
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000')
+  .split(',').map((o) => o.trim()).filter(Boolean);
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
-  credentials: true
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error(`CORS: origin ${origin} not in CLIENT_URL allow-list`));
+  },
+  credentials: true,
 }));
 
 // Rate limiting
