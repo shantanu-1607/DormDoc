@@ -51,7 +51,8 @@
     "lint-staged": "^16.4.0",
     "mongodb": "^7.2.0",
     "nodemon": "^3.0.1",
-    "supabase": "^2.101.0"
+    "supabase": "^2.101.0",
+    "vercel": "^54.4.1"
   },
   "engines": {
     "node": ">=18.0.0",

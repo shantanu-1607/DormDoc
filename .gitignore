@@ -74,3 +74,6 @@ Thumbs.db
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Vercel CLI link state
+.vercel
