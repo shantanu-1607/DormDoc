@@ -1,25 +1,19 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const {
+  PRESCRIPTIONS_BUCKET,
+  uploadBuffer,
+  deleteObject,
+  createSignedUrl,
+} = require('../db/storage');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads/prescriptions');
-    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const suffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + suffix + path.extname(file.originalname));
-  },
-});
-
+// In-memory multer — files go straight to Supabase Storage, never touch disk.
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|pdf/;
@@ -53,9 +47,6 @@ const writeMedications = async (sb, prescriptionId, meds) => {
   if (error) throw error;
 };
 
-// Hydrate doctor + student names for admin/doctor listings. Avoids the
-// embedded-relationship-name footgun by joining via service-role since
-// these endpoints already require staff access.
 const hydrateNames = async (req, rows) => {
   const ids = [
     ...new Set(
@@ -69,6 +60,13 @@ const hydrateNames = async (req, rows) => {
   return map;
 };
 
+// Convert a legacy /uploads/prescriptions/<file> path to null so we don't try
+// to sign a path that doesn't exist in Storage. After Phase 5 every newly
+// uploaded file_url is a Storage key, but historic rows may still hold the
+// legacy disk path.
+const isStoragePath = (fileUrl) =>
+  typeof fileUrl === 'string' && fileUrl.length > 0 && !fileUrl.startsWith('/uploads/');
+
 // === STUDENT ROUTES ===
 router.get('/student/prescriptions', async (req, res) => {
   const { data, error } = await req.sb
@@ -81,6 +79,7 @@ router.get('/student/prescriptions', async (req, res) => {
 });
 
 router.post('/student/prescriptions/upload', upload.single('prescriptionFile'), async (req, res) => {
+  let storagePath = null;
   try {
     const { doctorName, date, medications, notes } = req.body;
     if (!doctorName || !date || !medications) {
@@ -94,12 +93,28 @@ router.post('/student/prescriptions/upload', upload.single('prescriptionFile'), 
         doctor_name: doctorName,
         date,
         notes: notes ?? '',
-        file_url: req.file ? `/uploads/prescriptions/${req.file.filename}` : null,
+        file_url: null,
         status: 'pending',
       })
       .select()
       .single();
     if (error) throw error;
+
+    if (req.file) {
+      const ext = path.extname(req.file.originalname).toLowerCase() || '';
+      storagePath = `${req.user.id}/${prescription.id}${ext}`;
+      await uploadBuffer({
+        bucket: PRESCRIPTIONS_BUCKET,
+        path: storagePath,
+        buffer: req.file.buffer,
+        contentType: req.file.mimetype,
+      });
+      const { error: updErr } = await req.sb
+        .from('prescriptions')
+        .update({ file_url: storagePath })
+        .eq('id', prescription.id);
+      if (updErr) throw updErr;
+    }
 
     await writeMedications(req.sb, prescription.id, parseMedications(medications));
 
@@ -111,6 +126,9 @@ router.post('/student/prescriptions/upload', upload.single('prescriptionFile'), 
     res.json(hydrated);
   } catch (error) {
     console.error('Upload prescription error:', error);
+    if (storagePath) {
+      try { await deleteObject({ bucket: PRESCRIPTIONS_BUCKET, path: storagePath }); } catch {}
+    }
     res.status(500).json({ message: error.message || 'Server error uploading prescription' });
   }
 });
@@ -125,9 +143,9 @@ router.delete('/student/prescriptions/:id', async (req, res) => {
   if (!prescription) return res.status(404).json({ message: 'Prescription not found' });
   if (prescription.student_id !== req.user.id) return res.status(403).json({ message: 'Not authorized to delete this prescription' });
 
-  if (prescription.file_url) {
-    const filePath = path.join(__dirname, '..', prescription.file_url);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  if (isStoragePath(prescription.file_url)) {
+    try { await deleteObject({ bucket: PRESCRIPTIONS_BUCKET, path: prescription.file_url }); }
+    catch (err) { console.error('Storage delete failed (continuing):', err.message); }
   }
 
   const { error } = await req.sb.from('prescriptions').delete().eq('id', req.params.id);
@@ -173,9 +191,9 @@ router.delete('/admin/prescriptions/:id', requireRole(['admin']), async (req, re
   if (readErr) return res.status(500).json({ message: readErr.message });
   if (!prescription) return res.status(404).json({ message: 'Prescription not found' });
 
-  if (prescription.file_url) {
-    const filePath = path.join(__dirname, '..', prescription.file_url);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  if (isStoragePath(prescription.file_url)) {
+    try { await deleteObject({ bucket: PRESCRIPTIONS_BUCKET, path: prescription.file_url }); }
+    catch (err) { console.error('Storage delete failed (continuing):', err.message); }
   }
 
   const { error } = await req.sb.from('prescriptions').delete().eq('id', req.params.id);
@@ -254,6 +272,37 @@ router.get('/:id', async (req, res) => {
     student: names[prescription.student_id] || null,
     doctor: names[prescription.doctor_id] || null,
   });
+});
+
+// === SIGNED FILE URL ===
+// Returns a short-lived signed URL the client can open() in a new tab.
+// Replaces the legacy practice of storing a static /uploads/... path that
+// the client opened directly.
+router.get('/:id/file-url', async (req, res) => {
+  const { data: prescription, error } = await req.sb
+    .from('prescriptions')
+    .select('id, student_id, file_url')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (error) return res.status(500).json({ message: error.message });
+  if (!prescription) return res.status(404).json({ message: 'Prescription not found' });
+  if (req.user.role === 'student' && prescription.student_id !== req.user.id) {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+  if (!isStoragePath(prescription.file_url)) {
+    return res.status(404).json({ message: 'No file attached to this prescription' });
+  }
+
+  try {
+    const signedUrl = await createSignedUrl({
+      bucket: PRESCRIPTIONS_BUCKET,
+      path: prescription.file_url,
+    });
+    res.json({ signedUrl });
+  } catch (err) {
+    console.error('Sign prescription file URL failed:', err);
+    res.status(500).json({ message: 'Failed to generate file URL' });
+  }
 });
 
 module.exports = router;

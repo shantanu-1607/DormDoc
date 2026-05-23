@@ -1,26 +1,16 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const { Readable } = require('stream');
 const csv = require('csv-parser');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads/csv');
-    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
+// CSV import never persists the file — parse it from memory and discard.
+// Drops the legacy ../uploads/csv disk dependency.
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'text/csv' || path.extname(file.originalname).toLowerCase() === '.csv') {
@@ -113,7 +103,7 @@ router.post('/admin/inventory/upload-csv', upload.single('csvFile'), async (req,
   const results = [];
   const errors = [];
 
-  fs.createReadStream(req.file.path)
+  Readable.from(req.file.buffer)
     .pipe(csv())
     .on('data', (data) => results.push(data))
     .on('end', async () => {
@@ -122,7 +112,6 @@ router.post('/admin/inventory/upload-csv', upload.single('csvFile'), async (req,
           const { error } = await req.sb.from('inventory_items').insert(toRow(row, req.user.id));
           if (error) errors.push({ row, error: error.message });
         }
-        fs.unlinkSync(req.file.path);
         res.json({
           message: 'CSV file processed successfully',
           totalRows: results.length,
