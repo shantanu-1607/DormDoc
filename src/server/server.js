@@ -7,7 +7,6 @@ require('dotenv').config();
 require('dotenv').config({ path: require('path').resolve(process.cwd(), '.env.local'), override: true });
 
 const authRoutes = require('./routes/auth');
-const adminAuthRoutes = require('./routes/admin');
 // Legacy Clerk + Mongo-OTP routes removed in Phase 2 (Supabase Auth migration).
 const studentRoutes = require('./routes/student');
 const adminRoutes = require('./routes/admin');
@@ -74,9 +73,8 @@ app.get('/api/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/onboarding', require('./routes/onboarding'));
-app.use('/api/admin', adminAuthRoutes);
-app.use('/api/student', studentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/student', studentRoutes);
 app.use('/api/ambulance', ambulanceRoutes);
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/ai', aiRoutes);
