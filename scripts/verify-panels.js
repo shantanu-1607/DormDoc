@@ -34,6 +34,7 @@ const PANELS = [
   { role: 'doctor',           email: 'doctor.demo@bitmesra.ac.in' },
   { role: 'dispensary_staff', email: 'nurse.demo@bitmesra.ac.in' },
   { role: 'admin',            email: 'admin.demo@bitmesra.ac.in' },
+  { role: 'admin',            email: 'amananshu2004@gmail.com' },
   { role: 'parent',           email: 'parent.demo@example.com' },
 ];
 

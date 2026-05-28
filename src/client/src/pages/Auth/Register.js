@@ -21,7 +21,7 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import { useAuth } from '../../contexts/AuthContext';
 import AuthShell from './AuthShell';
 import { palette } from '../../theme';
-import { isBitEmail, BIT_DOMAIN, normalizeEmail } from '../../utils/emailDomain';
+import { isBitEmail, isWhitelisted, BIT_DOMAIN, normalizeEmail } from '../../utils/emailDomain';
 
 const MIN_PASSWORD = 8;
 
@@ -42,7 +42,7 @@ const Register = () => {
     setError('');
     const normalized = normalizeEmail(email);
 
-    if (!isBitEmail(normalized)) {
+    if (!isBitEmail(normalized) && !isWhitelisted(normalized)) {
       setError(
         `Registration is open only to @${BIT_DOMAIN} addresses. If you're a parent, ask the dispensary to enrol you — parents don't self-register.`,
       );

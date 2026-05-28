@@ -132,6 +132,21 @@ const PANELS = [
     },
   },
   {
+    role: 'admin',
+    email: 'amananshu2004@gmail.com',
+    name: 'anshu aman',
+    profile: {},
+    roleTable: 'dispensary_staff',
+    roleRow: {
+      staff_id: 'btech1015123',
+      staff_type: 'medical_officer',
+      designation: 'Super Admin',
+      experience: 0,
+      shift: 'morning',
+      blood_group: 'A+',
+    },
+  },
+  {
     role: 'parent',
     email: 'parent.demo@example.com',
     name: 'Rajesh Kumar',
