@@ -116,6 +116,111 @@ async function logAuditEvent(sb, { userId, email, action, status = 'success', re
 
 // ─── routes ─────────────────────────────────────────────────────────────────
 
+// Aggregated payload for the AdminDashboard component. Everything is best-effort
+// — a fresh DB with no appointments / no ambulances still renders an empty
+// dashboard instead of erroring out.
+router.get('/dashboard', async (req, res) => {
+  try {
+    const sb = supabaseAdmin;
+    const today = new Date().toISOString().slice(0, 10);
+
+    const [
+      studentsCnt,
+      doctorsCnt,
+      ambulancesCnt,
+      activeApptsCnt,
+      todayApptsCnt,
+      doctorRows,
+      ambulanceRows,
+      queueRows,
+      todayStatusRows,
+      emergencyRows,
+    ] = await Promise.all([
+      sb.from('students').select('id', { count: 'exact', head: true }),
+      sb.from('dispensary_staff').select('id', { count: 'exact', head: true }).eq('staff_type', 'medical_officer'),
+      sb.from('ambulances').select('id', { count: 'exact', head: true }),
+      sb.from('appointments').select('id', { count: 'exact', head: true }).in('status', ['scheduled', 'confirmed', 'in_progress']),
+      sb.from('appointments').select('id', { count: 'exact', head: true }).eq('appointment_date', today),
+      sb.from('dispensary_staff').select('id, staff_id, designation, is_on_duty').eq('staff_type', 'medical_officer').limit(10),
+      sb.from('ambulances').select('*').limit(10),
+      sb.from('appointments').select('id, queue_number, status, student_id, doctor_id').eq('appointment_date', today).in('status', ['scheduled', 'in_progress']).order('queue_number', { ascending: true }).limit(10),
+      sb.from('appointments').select('status').eq('appointment_date', today),
+      sb.from('appointments').select('id, symptoms, emergency_reason, student_id').eq('appointment_date', today).eq('is_emergency', true).limit(10),
+    ]);
+
+    const userIds = [
+      ...(doctorRows.data || []).map((d) => d.id),
+      ...(queueRows.data || []).map((a) => a.student_id),
+      ...(emergencyRows.data || []).map((a) => a.student_id),
+    ];
+    const profileMap = {};
+    if (userIds.length) {
+      const { data: profs } = await sb
+        .from('profiles')
+        .select('id, name, email, phone')
+        .in('id', [...new Set(userIds.filter(Boolean))]);
+      (profs || []).forEach((p) => { profileMap[p.id] = p; });
+    }
+
+    const counts = {};
+    (todayStatusRows.data || []).forEach((r) => { counts[r.status] = (counts[r.status] || 0) + 1; });
+    const normStatus = (s) => (s === 'in_progress' ? 'in-progress' : s);
+    const todayStats = Object.entries(counts).map(([status, count]) => ({
+      _id: normStatus(status),
+      count,
+    }));
+
+    const doctors = (doctorRows.data || []).map((d) => {
+      const p = profileMap[d.id] || {};
+      return {
+        _id: d.id,
+        name: p.name || 'Unknown',
+        email: p.email,
+        phone: p.phone,
+        designation: d.designation,
+        isOnDuty: d.is_on_duty,
+        staffId: d.staff_id,
+      };
+    });
+
+    const ambulances = (ambulanceRows.data || []).map((a) => ({
+      ...a,
+      _id: a.id,
+    }));
+
+    const studentQueue = (queueRows.data || []).map((a) => ({
+      _id: a.id,
+      queueNumber: a.queue_number,
+      status: normStatus(a.status),
+      student: { name: profileMap[a.student_id]?.name || 'Unknown' },
+    }));
+
+    const emergencyAlerts = (emergencyRows.data || []).map((a) => ({
+      _id: a.id,
+      reason: a.emergency_reason || a.symptoms,
+      student: { name: profileMap[a.student_id]?.name || 'Unknown' },
+    }));
+
+    res.json({
+      doctors,
+      ambulances,
+      studentQueue,
+      todayStats,
+      emergencyAlerts,
+      systemMetrics: {
+        totalStudents: studentsCnt.count || 0,
+        totalDoctors: doctorsCnt.count || 0,
+        totalAmbulances: ambulancesCnt.count || 0,
+        activeAppointments: activeApptsCnt.count || 0,
+        todayAppointments: todayApptsCnt.count || 0,
+      },
+    });
+  } catch (err) {
+    console.error('admin/dashboard failed:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get('/login-info', async (req, res) => {
   try {
     const sb = req.sb;

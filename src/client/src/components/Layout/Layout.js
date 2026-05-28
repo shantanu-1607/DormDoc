@@ -42,6 +42,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import PanelSwitcher from '../PanelSwitcher';
 import { palette } from '../../theme';
 import CollegeHeader from './CollegeHeader';
 import CollegeFooter from './CollegeFooter';
@@ -378,6 +379,8 @@ const Layout = ({ children }) => {
                   {ROLE_LABEL[user?.role] || 'Portal'}
                 </Typography>
               </Box>
+
+              <PanelSwitcher sx={{ display: { xs: 'none', md: 'block' } }} />
 
               <Tooltip title="Notifications">
                 <IconButton sx={{ color: palette.navy.dark }}>

@@ -30,6 +30,7 @@ import { useQuery } from 'react-query';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { palette } from '../../theme';
+import PanelSwitcher from '../../components/PanelSwitcher';
 import {
   WelcomeBanner,
   StatTile,
@@ -117,6 +118,9 @@ const AdminDashboard = () => {
 
   return (
     <Box sx={{ pb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+        <PanelSwitcher />
+      </Box>
       <WelcomeBanner
         overline={currentTime.toLocaleDateString(undefined, {
           weekday: 'long',
