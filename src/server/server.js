@@ -83,6 +83,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/onboarding', require('./routes/onboarding'));
 app.use('/api/admin', adminRoutes);
+app.use('/api/doctor', require('./routes/doctor'));
 app.use('/api/student', studentRoutes);
 app.use('/api/ambulance', ambulanceRoutes);
 app.use('/api/chat', require('./routes/chat'));

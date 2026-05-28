@@ -27,6 +27,12 @@ if (!SUPABASE_URL || !ANON_KEY) {
   process.exit(1);
 }
 
+// Per-account password overrides for any panel that has been rotated off
+// the default demo password (e.g. the super-admin set their own).
+const PASSWORD_OVERRIDES = {
+  'amananshu2004@gmail.com': '12345678',
+};
+
 const PANELS = [
   { role: 'student',          email: 'btech10001.23@bitmesra.ac.in' },
   { role: 'faculty',          email: 'faculty.cse.demo@bitmesra.ac.in' },
@@ -38,6 +44,8 @@ const PANELS = [
   { role: 'parent',           email: 'parent.demo@example.com' },
 ];
 
+const passwordFor = (email) => PASSWORD_OVERRIDES[email] || DEMO_PASSWORD;
+
 async function signInAsRole(email) {
   // anon client so the request goes through the same auth path as the browser.
   const anon = createClient(SUPABASE_URL, ANON_KEY, {
@@ -45,7 +53,7 @@ async function signInAsRole(email) {
   });
   const { data, error } = await anon.auth.signInWithPassword({
     email,
-    password: DEMO_PASSWORD,
+    password: passwordFor(email),
   });
   if (error) throw new Error(`signInWithPassword: ${error.message}`);
   return data.session.access_token;
