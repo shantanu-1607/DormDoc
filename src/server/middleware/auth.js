@@ -195,8 +195,12 @@ const authenticateToken = async (req, res, next) => {
     if (user.inactive) return res.status(401).json({ message: 'Account deactivated' });
 
     // "View as" preview — impersonate a representative user of the previewed role.
+    // Identity/account routes (/api/auth/*) are NEVER impersonated: the app must
+    // always resolve the real signed-in user, or an admin previewing another role
+    // would get locked out of their own identity (and the panel switcher).
     const viewAs = (req.headers['x-view-as'] || '').toLowerCase();
-    if (viewAs && viewAs !== user.role && canPreviewAs(user.role, viewAs)) {
+    const isIdentityRoute = (req.originalUrl || '').split('?')[0].startsWith('/api/auth/');
+    if (viewAs && !isIdentityRoute && viewAs !== user.role && canPreviewAs(user.role, viewAs)) {
       const rep = await loadRepresentativeUser(viewAs);
       if (rep && !rep.inactive) {
         if (req.method !== 'GET') {

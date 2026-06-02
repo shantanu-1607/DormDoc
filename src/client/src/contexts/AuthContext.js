@@ -21,6 +21,17 @@ const applyAccessToken = (token) => {
   }
 };
 
+// Drop any persisted "view as" preview so a fresh sign-in / sign-out always
+// starts on the real account's panel instead of a stale previewed role.
+const clearViewAsPreview = () => {
+  try {
+    window.localStorage.removeItem('dormdoc.viewAsRole');
+    window.dispatchEvent(new Event('dormdoc:viewAsChange'));
+  } catch (_) {
+    /* localStorage unavailable — nothing to clear */
+  }
+};
+
 // Forward the active "view as" preview role (set by the panel switcher and
 // persisted in localStorage) on every request. The server uses it to serve the
 // previewed role's data for admins/HODs; absent it, requests behave normally.
@@ -104,6 +115,7 @@ export const AuthProvider = ({ children }) => {
         password,
       });
       if (error) throw error;
+      clearViewAsPreview();
       toast.success('Signed in!');
       return { success: true, data };
     } catch (error) {
@@ -243,6 +255,7 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     localStorage.removeItem('userQRCode');
+    clearViewAsPreview();
     setUser(null);
     setSession(null);
     setNeedsOnboarding(false);
