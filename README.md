@@ -305,7 +305,7 @@ The dev server boots:
 - ⚛️  **React client** → http://localhost:3000
 - 🔌 **Express API** → http://localhost:5000
 
-In `NODE_ENV=development` the server accepts three bypass tokens (`dev_token` for student, `hod_dev_token` for HOD, `admin_dev_token` for admin) that skip Supabase Auth. Backed by real seeded `auth.users` rows so policy-respecting queries still work — see `supabase/migrations/` and the memory notes for the seed SQL.
+In `NODE_ENV=development`, if you need to test without real Supabase Auth, you can opt into a development bypass by setting `DEV_AUTH_BYPASS=true` in your `.env`. When enabled, you can provide a valid user UUID directly as the `Bearer` token to act as that user. Backed by real seeded `auth.users` rows so policy-respecting queries still work — see `supabase/migrations/` and the memory notes for the seed SQL.
 
 ---
 
@@ -329,7 +329,7 @@ curl http://localhost:5000/api/health
 
 ```bash
 curl -X POST http://localhost:5000/api/student/book-appointment \
-  -H "Authorization: Bearer dev_token" \
+  -H "Authorization: Bearer 00000000-0000-0000-0000-000000000001" \
   -H "Content-Type: application/json" \
   -d '{
     "doctorId": "00000000-0000-0000-0000-000000000003",
@@ -354,7 +354,7 @@ curl -X POST http://localhost:5000/api/student/book-appointment \
 
 ```bash
 curl -X POST http://localhost:5000/api/student/sos \
-  -H "Authorization: Bearer dev_token" \
+  -H "Authorization: Bearer 00000000-0000-0000-0000-000000000001" \
   -H "Content-Type: application/json" \
   -d '{ "symptoms": "Severe chest pain", "location": { "address": "Hostel 3" } }'
 ```

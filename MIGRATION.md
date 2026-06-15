@@ -130,7 +130,7 @@ Decision log:
 - [x] Server `middleware/auth.js`: HS256 verify against `SUPABASE_JWT_SECRET`, load profile + role-row via service-role
 - [x] Add `src/server/db/supabase.js` (service-role + user-scoped clients)
 - [x] Delete `routes/clerkAuth.js` + `@clerk/clerk-react` from client deps
-- [x] Preserve dev-bypass tokens (`dev_token` / `hod_dev_token` under `NODE_ENV=development`, stable UUIDs)
+- [x] Implement dev-bypass via `DEV_AUTH_BYPASS=true` under `NODE_ENV=development`
 - [x] Add `POST /api/onboarding` for first-time role-specific row insert
 
 ### Block 2.4: Profile sync trigger → ✅ done (Phase 1.4)

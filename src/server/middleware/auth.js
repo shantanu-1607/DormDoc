@@ -1,48 +1,8 @@
 const jwt = require('jsonwebtoken');
 const { supabaseAdmin, supabaseForUser } = require('../db/supabase');
-
-const DEV_STUDENT_UUID = '00000000-0000-0000-0000-000000000001';
-const DEV_HOD_UUID = '00000000-0000-0000-0000-000000000002';
-const DEV_ADMIN_UUID = '00000000-0000-0000-0000-000000000003';
-
-const devStudentUser = {
-  id: DEV_STUDENT_UUID,
-  _id: DEV_STUDENT_UUID,
-  name: 'Test Student',
-  email: 'dev-student@bitmesra.local',
-  role: 'student',
-  studentId: 'BIT123',
-  department: 'Computer Science',
-  bloodGroup: 'O+',
-};
-
-const devHodUser = {
-  id: DEV_HOD_UUID,
-  _id: DEV_HOD_UUID,
-  name: 'Test HOD',
-  email: 'dev-hod@bitmesra.local',
-  role: 'hod',
-  facultyId: 'BIT-FAC-HOD-001',
-  department: 'Computer Science',
-  hodDepartment: 'Computer Science',
-  designation: 'HOD',
-  hodPermissions: {
-    canApproveLeave: true,
-    canViewMedicalHistory: true,
-    canExportReports: true,
-  },
-};
-
-const devAdminUser = {
-  id: DEV_ADMIN_UUID,
-  _id: DEV_ADMIN_UUID,
-  name: 'Test Admin',
-  email: 'dev-admin@bitmesra.local',
-  role: 'admin',
-  staffId: 'BIT-DISP-ADMIN-001',
-  staffType: 'admin_staff',
-  designation: 'Admin',
-};
+if (process.env.DEV_AUTH_BYPASS === 'true' && process.env.NODE_ENV !== 'development') {
+  throw new Error('FATAL: Insecure development authentication bypass is enabled outside of local development environment.');
+}
 
 // Pull the role-specific row alongside the profile so downstream routes see the
 // fields they used to read off the Mongo User document. Phase 3 will replace
@@ -112,30 +72,21 @@ const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     const isDev = process.env.NODE_ENV === 'development';
+    const isBypassEnabled = isDev && process.env.DEV_AUTH_BYPASS === 'true';
 
     if (!token) {
-      if (isDev) {
-        req.user = devStudentUser;
-        req.sb = supabaseAdmin;
-        return next();
-      }
       return res.status(401).json({ message: 'Access token required' });
     }
 
-    if (isDev && token === 'dev_token') {
-      req.user = devStudentUser;
-      req.sb = supabaseAdmin;
-      return next();
-    }
-    if (isDev && token === 'hod_dev_token') {
-      req.user = devHodUser;
-      req.sb = supabaseAdmin;
-      return next();
-    }
-    if (isDev && token === 'admin_dev_token') {
-      req.user = devAdminUser;
-      req.sb = supabaseAdmin;
-      return next();
+    if (isBypassEnabled) {
+      const user = await loadUserFromProfile(token);
+      if (user) {
+        if (user.inactive) return res.status(401).json({ message: 'Account deactivated' });
+        req.user = user;
+        req.accessToken = token;
+        req.sb = supabaseAdmin;
+        return next();
+      }
     }
 
     const decoded = verifySupabaseJwt(token);
@@ -187,8 +138,20 @@ const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
+    const isDev = process.env.NODE_ENV === 'development';
+    const isBypassEnabled = isDev && process.env.DEV_AUTH_BYPASS === 'true';
 
     if (token) {
+      if (isBypassEnabled) {
+        const user = await loadUserFromProfile(token);
+        if (user && !user.inactive) {
+          req.user = user;
+          req.accessToken = token;
+          req.sb = supabaseAdmin;
+          return next();
+        }
+      }
+
       const decoded = verifySupabaseJwt(token);
       const user = await loadUserFromProfile(decoded.sub);
       if (user && !user.inactive) {
