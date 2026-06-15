@@ -217,7 +217,7 @@ router.get('/dashboard', async (req, res) => {
     });
   } catch (err) {
     console.error('admin/dashboard failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 

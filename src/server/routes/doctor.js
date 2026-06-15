@@ -64,7 +64,7 @@ router.get('/appointments/today', async (req, res) => {
     );
   } catch (err) {
     console.error('doctor/appointments/today failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -101,7 +101,7 @@ router.get('/patients/recent', async (req, res) => {
     );
   } catch (err) {
     console.error('doctor/patients/recent failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -133,7 +133,7 @@ router.get('/patients', async (req, res) => {
     );
   } catch (err) {
     console.error('doctor/patients failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -164,7 +164,7 @@ router.get('/prescriptions', async (req, res) => {
     );
   } catch (err) {
     console.error('doctor/prescriptions failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -179,7 +179,7 @@ router.get('/ambulances/available', async (req, res) => {
     res.json((data || []).map((a) => ({ ...a, _id: a.id })));
   } catch (err) {
     console.error('doctor/ambulances/available failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -218,7 +218,7 @@ router.post('/prescriptions', async (req, res) => {
     res.status(201).json({ id: rx.id });
   } catch (err) {
     console.error('doctor/prescriptions POST failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -264,7 +264,7 @@ router.post('/ambulance-booking', async (req, res) => {
     res.status(201).json({ id: data.id });
   } catch (err) {
     console.error('doctor/ambulance-booking failed:', err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
