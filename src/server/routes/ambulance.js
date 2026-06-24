@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+const { body, query, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -98,46 +98,54 @@ router.get('/status', async (req, res) => {
   }
 });
 
-router.get('/available', async (req, res) => {
-  try {
-    const sb = req.sb;
-    const { latitude, longitude, maxDistance = 10 } = req.query;
-    if (!latitude || !longitude) {
-      return res.status(400).json({ message: 'Latitude and longitude are required' });
+router.get(
+  '/available',
+  [
+    query('latitude').notEmpty().withMessage('Latitude is required').isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
+    query('longitude').notEmpty().withMessage('Longitude is required').isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
+    query('maxDistance').optional().isFloat({ min: 0 }).withMessage('maxDistance must be a positive number'),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+      const sb = req.sb;
+      const { latitude, longitude, maxDistance = 10 } = req.query;
+
+      const { data: ambulances } = await sb
+        .from('ambulances')
+        .select('*')
+        .eq('status', 'available')
+        .eq('is_active', true);
+
+      const lat = parseFloat(latitude);
+      const lon = parseFloat(longitude);
+      const max = parseFloat(maxDistance);
+
+      const ranked = (ambulances || [])
+        .map((a) => ({ ambulance: a, distance: haversineKm(a.latitude, a.longitude, lat, lon) }))
+        .filter((x) => x.distance <= max)
+        .sort((a, b) => a.distance - b.distance)
+        .map((x) => ({ ...toClientAmbulance(x.ambulance, null), distanceKm: x.distance }));
+
+      res.json({ availableAmbulances: ranked });
+    } catch (error) {
+      console.error('Get available ambulances error:', error);
+      res.status(500).json({ message: 'Server error fetching available ambulances' });
     }
-
-    const { data: ambulances } = await sb
-      .from('ambulances')
-      .select('*')
-      .eq('status', 'available')
-      .eq('is_active', true);
-
-    const lat = parseFloat(latitude);
-    const lon = parseFloat(longitude);
-    const max = parseFloat(maxDistance);
-
-    const ranked = (ambulances || [])
-      .map((a) => ({ ambulance: a, distance: haversineKm(a.latitude, a.longitude, lat, lon) }))
-      .filter((x) => x.distance <= max)
-      .sort((a, b) => a.distance - b.distance)
-      .map((x) => ({ ...toClientAmbulance(x.ambulance, null), distanceKm: x.distance }));
-
-    res.json({ availableAmbulances: ranked });
-  } catch (error) {
-    console.error('Get available ambulances error:', error);
-    res.status(500).json({ message: 'Server error fetching available ambulances' });
   }
-});
+);
 
 router.post(
   '/request',
   [
     body('symptoms').notEmpty().withMessage('Symptoms description is required'),
-    body('pickupLocation.latitude').isNumeric().withMessage('Pickup latitude is required'),
-    body('pickupLocation.longitude').isNumeric().withMessage('Pickup longitude is required'),
+    body('pickupLocation.latitude').isFloat({ min: -90, max: 90 }).withMessage('Pickup latitude must be between -90 and 90'),
+    body('pickupLocation.longitude').isFloat({ min: -180, max: 180 }).withMessage('Pickup longitude must be between -180 and 180'),
     body('pickupLocation.address').notEmpty().withMessage('Pickup address is required'),
-    body('destination.latitude').optional().isNumeric().withMessage('Destination latitude must be numeric'),
-    body('destination.longitude').optional().isNumeric().withMessage('Destination longitude must be numeric'),
+    body('destination.latitude').optional().isFloat({ min: -90, max: 90 }).withMessage('Destination latitude must be between -90 and 90'),
+    body('destination.longitude').optional().isFloat({ min: -180, max: 180 }).withMessage('Destination longitude must be between -180 and 180'),
     body('destination.address').optional().isString().withMessage('Destination address must be string'),
     body('isEmergency').optional().isBoolean().withMessage('Emergency flag must be boolean'),
   ],
@@ -210,8 +218,8 @@ router.post(
 router.put(
   '/:id/update-location',
   [
-    body('latitude').isNumeric().withMessage('Latitude is required'),
-    body('longitude').isNumeric().withMessage('Longitude is required'),
+    body('latitude').isFloat({ min: -90, max: 90 }).withMessage('Latitude must be between -90 and 90'),
+    body('longitude').isFloat({ min: -180, max: 180 }).withMessage('Longitude must be between -180 and 180'),
     body('address').notEmpty().withMessage('Address is required'),
   ],
   async (req, res) => {
